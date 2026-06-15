@@ -172,38 +172,92 @@ router.get('/:id/custo', async (req, res) => {
   }
 });
 
-// ── RF-06: Exportar roteiro (gera texto estruturado) ─────────────────────────
+// ── RF-06: Exportar roteiro como PDF ─────────────────────────────────────────
 // GET /api/roteiros/:id/export
+const PDFDocument = require('pdfkit');
 router.get('/:id/export', async (req, res) => {
   try {
     const roteiro = await getRoteiroCompleto(req.params.id, req.usuario.id);
     if (!roteiro) return res.status(404).json({ error: 'Roteiro não encontrado.' });
 
-    let texto = `CONEXÃO GAÚCHA — ROTEIRO DE VIAGEM\n`;
-    texto += `${'='.repeat(40)}\n`;
-    texto += `Destino : ${roteiro.regiao_nome}\n`;
-    texto += `Título  : ${roteiro.titulo}\n`;
-    texto += `Período : ${roteiro.data_inicio} até ${roteiro.data_fim}\n`;
-    texto += `Orçamento: ${roteiro.nivel_orcamento}\n`;
-    texto += `Custo total estimado: R$ ${Number(roteiro.custo_total).toFixed(2)}\n\n`;
+    const doc = new PDFDocument({ margin: 50, size: 'A4' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="roteiro-${roteiro.id}.pdf"`);
+    doc.pipe(res);
 
-    for (const dia of roteiro.dias) {
-      texto += `${'─'.repeat(40)}\n`;
-      texto += `DIA ${dia.numero_dia} — ${dia.data} | Custo: R$ ${Number(dia.custo_dia).toFixed(2)}\n`;
-      for (const item of dia.itens) {
-        texto += `  ${item.horario || '--:--'} | ${item.local_nome} (${item.cidade})\n`;
-        texto += `         ${item.descricao}\n`;
-        texto += `         Custo: R$ ${Number(item.custo_medio).toFixed(2)} | Duração: ${item.duracao_estimada}\n`;
+    doc.fontSize(20).fillColor('#0f766e').text('CONEXÃO GAÚCHA', { align: 'center' });
+    doc.fontSize(13).fillColor('#334155').text('Roteiro de Viagem', { align: 'center' });
+    doc.moveDown(0.5);
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#0f766e').lineWidth(1.5).stroke();
+    doc.moveDown(0.5);
+
+    doc.fontSize(11).fillColor('#1e293b');
+    doc.text(`Destino: ${roteiro.regiao_nome}`);
+    doc.text(`Título: ${roteiro.titulo}`);
+    doc.text(`Período: ${roteiro.data_inicio} até ${roteiro.data_fim}`);
+    doc.text(`Orçamento: ${roteiro.nivel_orcamento}`);
+    doc.text(`Custo total estimado: R$ ${Number(roteiro.custo_total).toFixed(2)}`);
+    doc.moveDown(1);
+
+    for (const dia of (roteiro.dias || [])) {
+      doc.fontSize(12).fillColor('#0f766e').text(`Dia ${dia.numero_dia} — ${dia.data}`, { underline: true });
+      doc.fontSize(10).fillColor('#64748b').text(`Custo do dia: R$ ${Number(dia.custo_dia).toFixed(2)}`);
+      doc.moveDown(0.3);
+      for (const item of (dia.itens || [])) {
+        doc.fontSize(10).fillColor('#1e293b').text(`  ${item.horario || '--:--'}  ${item.local_nome || item.nome_manual || 'Atividade'}`);
+        if (item.descricao) doc.fontSize(9).fillColor('#64748b').text(`    ${item.descricao}`);
+        doc.fontSize(9).fillColor('#0f766e').text(`    R$ ${Number(item.custo_medio || 0).toFixed(2)}  ·  ${item.duracao_estimada || ''}`);
+        doc.moveDown(0.3);
       }
-      texto += '\n';
+      doc.moveDown(0.5);
     }
 
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="roteiro-${roteiro.id}.txt"`);
-    return res.send(texto);
+    doc.addPage();
+    doc.fontSize(14).fillColor('#0f766e').text('Resumo Financeiro', { align: 'center' });
+    doc.moveDown(0.5);
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#0f766e').lineWidth(1).stroke();
+    doc.moveDown(0.5);
+    for (const dia of (roteiro.dias || [])) {
+      doc.fontSize(10).fillColor('#1e293b').text(`Dia ${dia.numero_dia} (${dia.data})`, { continued: true })
+         .fillColor('#0f766e').text(`  R$ ${Number(dia.custo_dia).toFixed(2)}`, { align: 'right' });
+    }
+    doc.moveDown(0.5);
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#94a3b8').lineWidth(0.5).stroke();
+    doc.moveDown(0.3);
+    doc.fontSize(12).fillColor('#0f766e').text('TOTAL ESTIMADO', { continued: true })
+       .text(`R$ ${Number(roteiro.custo_total).toFixed(2)}`, { align: 'right' });
+
+    doc.end();
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao exportar roteiro.' });
+  }
+});
+
+// ── Resumo financeiro da viagem ───────────────────────────────────────────────
+// GET /api/roteiros/:id/resumo-financeiro
+router.get('/:id/resumo-financeiro', async (req, res) => {
+  try {
+    const roteiro = await getRoteiroCompleto(req.params.id, req.usuario.id);
+    if (!roteiro) return res.status(404).json({ error: 'Roteiro não encontrado.' });
+    const dias = (roteiro.dias || []).map(d => ({
+      numero_dia: d.numero_dia, data: d.data, custo_dia: Number(d.custo_dia),
+      itens: (d.itens || []).map(i => ({ nome: i.local_nome || i.nome_manual, custo: Number(i.custo_medio || 0), categoria: i.categoria })),
+    }));
+    const categorias = {};
+    dias.forEach(d => d.itens.forEach(i => {
+      const cat = i.categoria || 'Outros';
+      categorias[cat] = (categorias[cat] || 0) + i.custo;
+    }));
+    return res.json({
+      titulo: roteiro.titulo, nivel_orcamento: roteiro.nivel_orcamento,
+      data_inicio: roteiro.data_inicio, data_fim: roteiro.data_fim,
+      custo_total: Number(roteiro.custo_total),
+      por_categoria: categorias, por_dia: dias,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao calcular resumo.' });
   }
 });
 
@@ -217,7 +271,7 @@ router.get('/:id/share', async (req, res) => {
     );
     if (!roteiro) return res.status(404).json({ error: 'Roteiro não encontrado.' });
 
-    const baseUrl = process.env.APP_URL || 'http://localhost:3000';
+    const baseUrl = (process.env.APP_URL || 'http://200.132.38.218:8084').replace(/\/$/, '');
     const link = `${baseUrl}/roteiro/${roteiro.id}`;
 
     return res.json({
@@ -358,12 +412,14 @@ router.put('/itens/:itemId', async (req, res) => {
     `, [req.params.itemId, req.usuario.id]);
     if (!item) return res.status(404).json({ error: 'Item não encontrado.' });
 
-    const { nota, concluido, horario } = req.body;
+    const { nota, concluido, horario, custo_medio, ordem } = req.body;
     const fields = [];
     const vals = [];
-    if (nota      !== undefined) { fields.push('nota = ?');      vals.push(nota); }
-    if (concluido !== undefined) { fields.push('concluido = ?'); vals.push(concluido ? 1 : 0); }
-    if (horario   !== undefined) { fields.push('horario = ?');   vals.push(horario); }
+    if (nota        !== undefined) { fields.push('nota = ?');        vals.push(nota); }
+    if (concluido   !== undefined) { fields.push('concluido = ?');   vals.push(concluido ? 1 : 0); }
+    if (horario     !== undefined) { fields.push('horario = ?');     vals.push(horario); }
+    if (custo_medio !== undefined) { fields.push('custo_medio = ?'); vals.push(custo_medio); }
+    if (ordem       !== undefined) { fields.push('ordem = ?');       vals.push(ordem); }
     if (!fields.length) return res.status(400).json({ error: 'Nenhum campo para atualizar.' });
 
     vals.push(req.params.itemId);

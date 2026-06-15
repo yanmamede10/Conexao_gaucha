@@ -41,6 +41,9 @@ export const api = {
   getCustoRoteiro: (token, id) =>
     fetch(`${BASE}/roteiros/${id}/custo`, { headers: headers(token) }).then(r => r.json()),
 
+
+  getResumoFinanceiro: (token, id) =>
+    fetch(`${BASE}/roteiros/${id}/resumo-financeiro`, { headers: headers(token) }).then(r => r.json()),
   exportarRoteiro: (token, id) =>
     fetch(`${BASE}/roteiros/${id}/export`, { headers: { Authorization: `Bearer ${token}` } }),
 

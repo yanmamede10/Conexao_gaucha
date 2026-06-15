@@ -52,7 +52,7 @@ function NavBar({ active, setScreen }) {
     { id: "profile", label: "Perfil",    Icon: User },
   ];
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 flex z-50 max-w-sm mx-auto">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 flex z-40 max-w-sm mx-auto">
       {items.map(({ id, label, Icon }) => (
         <button key={id} onClick={() => setScreen(id)}
           className={`flex-1 py-3 flex flex-col items-center gap-0.5 text-xs font-medium transition-colors ${
@@ -314,7 +314,7 @@ function KmModal({ roteiro, token, onClose }) {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-[150] flex items-end justify-center bg-black/40" onClick={onClose}>
       <div className="bg-white rounded-t-3xl w-full max-w-sm p-6 pb-8" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-5">
           <h3 className="text-slate-800 font-bold text-base flex items-center gap-2"><RouteIcon size={18} className="text-teal-700" />Distância do roteiro</h3>
@@ -394,7 +394,7 @@ function LoginScreen({ setScreen, onLogin }) {
 
       <div className="bg-slate-50 rounded-t-3xl -mt-5 px-6 pt-8 pb-10 flex flex-col gap-4 relative z-10">
         {erro && (
-          <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-2.5 rounded-xl">
+          <div className="flex items-center justify-center gap-2 bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-2.5 rounded-xl text-center">
             <AlertTriangle size={15} />{erro}
           </div>
         )}
@@ -460,81 +460,97 @@ function RegisterScreen({ setScreen, onLogin }) {
   const [pw, setPw] = useState("");
   const [pwConfirm, setPwConfirm] = useState("");
   const [lgpd, setLgpd] = useState(false);
-  const [erro, setErro] = useState("");
+  const [erros, setErros] = useState({});
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    setErro("");
-    if (!nome.trim()) return setErro("Informe o nome completo.");
-    if (!email.trim()) return setErro("Informe o e-mail.");
-    if (!email.includes("@")) return setErro("E-mail inválido: deve conter '@'.");
-    if (!pw) return setErro("Informe a senha.");
-    if (pw.length < 6) return setErro("A senha deve ter no mínimo 6 caracteres.");
-    if (pw !== pwConfirm) return setErro("As senhas não coincidem.");
-    if (!lgpd) return setErro("Aceite a Política de Privacidade para continuar.");
+    const e = {};
+    if (!nome.trim()) e.nome = "Informe o nome completo.";
+    if (!email.trim()) e.email = "Informe o e-mail.";
+    else if (!email.includes("@")) e.email = "Insira um endereço de e-mail válido.";
+    if (!pw) e.pw = "Este campo é obrigatório.";
+    else if (pw.length < 6) e.pw = "A senha deve ter no mínimo 6 caracteres.";
+    if (pw && pwConfirm && pw !== pwConfirm) e.pwConfirm = "As senhas não coincidem.";
+    if (!lgpd) e.lgpd = "Aceite a Política de Privacidade para continuar.";
+    if (Object.keys(e).length) return setErros(e);
+    setErros({});
     setLoading(true);
     const res = await api.register(nome, email, pw);
     setLoading(false);
-    if (res.error) return setErro(res.error);
+    if (res.error) return setErros({ geral: res.error });
     onLogin(res.token, res.usuario, true);
     setScreen("home");
   };
+
+  const fc = (k) => `flex items-center gap-2 bg-white border rounded-xl px-3.5 py-3 focus-within:ring-2 transition ${erros[k] ? "border-red-400 focus-within:ring-red-300 bg-red-50/30" : "border-slate-200 focus-within:ring-teal-400"}`;
 
   return (
     <PageWrapper noNav>
       <div className="bg-teal-800 px-6 pt-14 pb-12 relative overflow-hidden">
         <div className="absolute -top-8 -right-8 w-36 h-36 rounded-full bg-white/5" />
-        <button onClick={() => setScreen("login")}
-          className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center mb-5">
+        <button onClick={() => setScreen("login")} className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center mb-5">
           <ArrowLeft size={18} color="white" />
         </button>
         <h1 className="text-white text-3xl font-bold leading-tight">Criar sua conta</h1>
         <p className="text-teal-200/80 text-sm mt-1">Comece a planejar aventuras gaúchas</p>
       </div>
-
       <div className="bg-slate-50 rounded-t-3xl -mt-5 px-6 pt-8 pb-10 flex flex-col gap-4 relative z-10">
-        {erro && (
-          <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-2.5 rounded-xl">
-            <AlertTriangle size={15} />{erro}
+        {erros.geral && (
+          <div className="flex items-center justify-center gap-2 bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-2.5 rounded-xl">
+            <AlertTriangle size={15} />{erros.geral}
           </div>
         )}
-        {[
-          { label: "Nome completo", val: nome, set: setNome, type: "text",  icon: User,  ph: "João da Silva" },
-          { label: "E-mail",        val: email, set: setEmail, type: "email", icon: Mail,  ph: "seu@email.com" },
-        ].map(f => (
-          <div key={f.label} className="flex flex-col gap-1.5">
-            <label className="text-slate-700 text-sm font-semibold">{f.label}</label>
-            <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3.5 py-3 focus-within:ring-2 focus-within:ring-teal-400 transition">
-              <f.icon size={16} className="text-slate-400 flex-shrink-0" />
-              <input type={f.type} placeholder={f.ph} value={f.val} onChange={e => f.set(e.target.value)}
-                className="flex-1 text-sm text-slate-800 placeholder-slate-400 focus:outline-none bg-transparent" />
-            </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-slate-700 text-sm font-semibold">Nome completo</label>
+          <div className={fc("nome")}>
+            <User size={16} className="text-slate-400 flex-shrink-0" />
+            <input type="text" placeholder="João da Silva" value={nome}
+              onChange={e => { setNome(e.target.value); setErros(p => ({...p, nome: ""})); }}
+              className="flex-1 text-sm text-slate-800 placeholder-slate-400 focus:outline-none bg-transparent" />
           </div>
-        ))}
+          {erros.nome && <p className="text-red-500 text-xs flex items-center gap-1 mt-0.5"><AlertTriangle size={11} />{erros.nome}</p>}
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-slate-700 text-sm font-semibold">E-mail</label>
+          <div className={fc("email")}>
+            <Mail size={16} className="text-slate-400 flex-shrink-0" />
+            <input type="text" placeholder="seu@email.com" value={email}
+              onChange={e => { setEmail(e.target.value); setErros(p => ({...p, email: ""})); }}
+              className="flex-1 text-sm text-slate-800 placeholder-slate-400 focus:outline-none bg-transparent" />
+          </div>
+          {erros.email && <p className="text-red-500 text-xs flex items-center gap-1 mt-0.5"><AlertTriangle size={11} />{erros.email}</p>}
+        </div>
         <div className="flex flex-col gap-1.5">
           <label className="text-slate-700 text-sm font-semibold">Senha</label>
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3.5 py-3 focus-within:ring-2 focus-within:ring-teal-400 transition">
+          <div className={fc("pw")}>
             <Lock size={16} className="text-slate-400 flex-shrink-0" />
-            <input type={showPw ? "text" : "password"} placeholder="Mínimo 6 caracteres" value={pw} onChange={e => setPw(e.target.value)}
+            <input type={showPw ? "text" : "password"} placeholder="Mínimo 6 caracteres" value={pw}
+              onChange={e => { setPw(e.target.value); setErros(p => ({...p, pw: ""})); }}
               className="flex-1 text-sm placeholder-slate-400 focus:outline-none bg-transparent" />
             <button onClick={() => setShowPw(v => !v)} className="text-slate-400">
               {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
+          {erros.pw && <p className="text-red-500 text-xs flex items-center gap-1 mt-0.5"><AlertTriangle size={11} />{erros.pw}</p>}
         </div>
         <div className="flex flex-col gap-1.5">
           <label className="text-slate-700 text-sm font-semibold">Confirmar senha</label>
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3.5 py-3 focus-within:ring-2 focus-within:ring-teal-400 transition">
+          <div className={fc("pwConfirm")}>
             <Lock size={16} className="text-slate-400 flex-shrink-0" />
-            <input type="password" placeholder="Repita a senha" value={pwConfirm} onChange={e => setPwConfirm(e.target.value)}
+            <input type="password" placeholder="Repita a senha" value={pwConfirm}
+              onChange={e => { setPwConfirm(e.target.value); setErros(p => ({...p, pwConfirm: ""})); }}
               className="flex-1 text-sm placeholder-slate-400 focus:outline-none bg-transparent" />
           </div>
+          {erros.pwConfirm && <p className="text-red-500 text-xs flex items-center gap-1 mt-0.5"><AlertTriangle size={11} />{erros.pwConfirm}</p>}
         </div>
-        <label className="flex items-start gap-2 cursor-pointer text-xs text-slate-600">
-          <input type="checkbox" checked={lgpd} onChange={e => setLgpd(e.target.checked)}
-            className="mt-0.5 accent-teal-700 w-4 h-4 flex-shrink-0" />
-          <span>Li e aceito a <span className="text-teal-700 font-semibold">Política de Privacidade</span> e o tratamento dos meus dados conforme a <span className="font-semibold">LGPD</span>.</span>
-        </label>
+        <div>
+          <label className="flex items-start gap-2 cursor-pointer text-xs text-slate-600">
+            <input type="checkbox" checked={lgpd} onChange={e => { setLgpd(e.target.checked); setErros(p => ({...p, lgpd: ""})); }}
+              className="mt-0.5 accent-teal-700 w-4 h-4 flex-shrink-0" />
+            <span>Li e aceito a <span className="text-teal-700 font-semibold">Política de Privacidade</span> e o tratamento dos meus dados conforme a <span className="font-semibold">LGPD</span>.</span>
+          </label>
+          {erros.lgpd && <p className="text-red-500 text-xs mt-1 flex items-center gap-1"><AlertTriangle size={11} />{erros.lgpd}</p>}
+        </div>
         <button onClick={handleRegister} disabled={loading}
           className="w-full bg-teal-800 hover:bg-teal-900 text-white font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition active:scale-95 disabled:opacity-60 mt-1">
           <UserPlus size={18} />{loading ? "Criando conta…" : "Criar conta"}
@@ -806,10 +822,8 @@ function PlannerStep2({ setScreen, planData, setPlanData }) {
           </div>
         ))}
 
-        <button disabled={!start || !end} onClick={continuar}
-          className={`w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition mt-1 ${
-            start && end ? "bg-teal-800 text-white hover:bg-teal-900 active:scale-95" : "bg-slate-200 text-slate-400 cursor-not-allowed"
-          }`}>
+        <button onClick={continuar}
+          className="w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition mt-1 bg-teal-800 text-white hover:bg-teal-900 active:scale-95">
           Continuar <ChevronRight size={16} />
         </button>
       </div>
@@ -923,13 +937,436 @@ function PlannerStep3({ setScreen, planData, setPlanData, token, setRoteiroAtivo
 }
 
 // ─── ITINERARY ────────────────────────────────────────────────────────────────
+// ─── MODAL RESUMO FINANCEIRO ─────────────────────────────────────────────────
+function ResumoFinanceiroModal({ roteiro, token, onClose }) {
+  const [dados, setDados] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/roteiros/${roteiro.id}/resumo-financeiro`, {
+      headers: { Authorization: `Bearer ${token}` }
+    }).then(r => r.json()).then(d => { setDados(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const cores = ['bg-teal-500', 'bg-blue-500', 'bg-amber-500', 'bg-emerald-500', 'bg-purple-500', 'bg-rose-500'];
+
+  return (
+    <div className="fixed inset-0 z-[150] flex items-end justify-center bg-black/40" onClick={onClose}>
+      <div className="bg-white rounded-t-3xl w-full max-w-sm p-5 pb-8 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-slate-800 font-bold text-base flex items-center gap-2">
+            <BarChart2 size={18} className="text-teal-700" />Resumo Financeiro
+          </h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center"><X size={16} /></button>
+        </div>
+
+        {loading && <p className="text-slate-400 text-sm text-center py-8">Calculando…</p>}
+
+        {dados && !loading && (
+          <div className="flex flex-col gap-4">
+            <div className="bg-teal-800 rounded-2xl p-4 text-center">
+              <p className="text-teal-200 text-xs mb-1">Custo total estimado</p>
+              <p className="text-white text-3xl font-bold">R$ {Number(dados.custo_total).toFixed(2)}</p>
+              <p className="text-teal-300 text-xs mt-1">{dados.data_inicio} → {dados.data_fim}</p>
+            </div>
+
+            <div>
+              <p className="text-slate-600 text-xs font-semibold uppercase tracking-wide mb-2">Por dia</p>
+              <div className="flex flex-col gap-1.5">
+                {(dados.por_dia || []).map(d => (
+                  <div key={d.numero_dia} className="flex items-center gap-3 bg-slate-50 rounded-xl px-3 py-2.5">
+                    <div className="w-7 h-7 rounded-full bg-teal-800 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">{d.numero_dia}</div>
+                    <div className="flex-1">
+                      <p className="text-slate-700 text-xs font-semibold">{d.data}</p>
+                      <p className="text-slate-400 text-xs">{d.itens.length} atividade{d.itens.length !== 1 ? 's' : ''}</p>
+                    </div>
+                    <span className="text-teal-700 font-bold text-sm">R$ {d.custo_dia.toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {Object.keys(dados.por_categoria || {}).length > 0 && (
+              <div>
+                <p className="text-slate-600 text-xs font-semibold uppercase tracking-wide mb-2">Por categoria</p>
+                <div className="flex flex-col gap-1.5">
+                  {Object.entries(dados.por_categoria).sort((a,b) => b[1] - a[1]).map(([cat, val], i) => {
+                    const pct = dados.custo_total > 0 ? (val / dados.custo_total * 100).toFixed(0) : 0;
+                    return (
+                      <div key={cat} className="flex flex-col gap-1">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-700 text-xs font-medium">{cat}</span>
+                          <span className="text-slate-600 text-xs">R$ {val.toFixed(2)} ({pct}%)</span>
+                        </div>
+                        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div className={`h-full ${cores[i % cores.length]} rounded-full`} style={{width: `${pct}%`}} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── MODAL MAPA DO DIA ───────────────────────────────────────────────────────
+function MapaDiaModal({ dia, onClose }) {
+  const itens = dia.itens || [];
+  const markers = itens
+    .filter(i => i.latitude && i.longitude)
+    .map(i => `${i.latitude},${i.longitude}`)
+    .join("|");
+
+  const query = itens.map(i => i.local_nome || i.nome_manual).filter(Boolean).join(" + ") || dia.data;
+  const src = markers
+    ? `https://www.google.com/maps/embed/v1/directions?key=AIzaSyD-9tSrke72PouQMnMX-a7eZSW0jkFMBWY&origin=${itens[0]?.local_nome || "Porto Alegre"}&destination=${itens[itens.length-1]?.local_nome || "Porto Alegre"}&waypoints=${markers}&mode=driving`
+    : `https://www.google.com/maps/embed/v1/search?key=AIzaSyD-9tSrke72PouQMnMX-a7eZSW0jkFMBWY&q=${encodeURIComponent(query + " Rio Grande do Sul")}`;
+
+  // Fallback: open in new tab if embed fails
+  const openExternal = () => {
+    const q = itens.map(i => i.local_nome || i.nome_manual).filter(Boolean).join("/");
+    window.open(`https://maps.google.com/?q=${encodeURIComponent(q || query)}`, "_blank");
+  };
+
+  return (
+    <div className="fixed inset-0 z-[150] flex flex-col bg-black/70" onClick={onClose}>
+      <div className="bg-white w-full max-w-sm mx-auto mt-auto rounded-t-3xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="flex justify-between items-center px-5 py-4 border-b border-slate-100">
+          <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+            <MapPin size={16} className="text-teal-700" />Rota do Dia {dia.numero_dia} — {dia.data}
+          </h3>
+          <div className="flex gap-2">
+            <button onClick={openExternal} title="Abrir no Google Maps"
+              className="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center">
+              <ExternalLink size={15} />
+            </button>
+            <button onClick={onClose} className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center"><X size={15} /></button>
+          </div>
+        </div>
+        <div className="bg-slate-100 flex flex-col px-4 py-3 gap-2 max-h-48 overflow-y-auto">
+          {itens.length === 0
+            ? <p className="text-slate-400 text-sm text-center py-4">Nenhum item neste dia ainda.</p>
+            : itens.map((item, i) => (
+              <div key={i} className="flex items-center gap-2.5">
+                <div className="w-5 h-5 rounded-full bg-teal-800 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">{i+1}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-slate-800 text-xs font-semibold truncate">{item.local_nome || item.nome_manual}</p>
+                  <p className="text-slate-400 text-xs">{item.horario}</p>
+                </div>
+              </div>
+            ))
+          }
+        </div>
+        <div className="relative bg-slate-200" style={{height: "280px"}}>
+          <iframe
+            title={`Mapa do Dia ${dia.numero_dia}`}
+            src={`https://maps.google.com/maps?q=${encodeURIComponent(itens.map(i => i.local_nome || i.nome_manual).filter(Boolean).join(", ") || "Rio Grande do Sul")}&output=embed&z=10`}
+            className="w-full h-full border-0"
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+          />
+        </div>
+        <div className="px-4 py-3">
+          <button onClick={openExternal}
+            className="w-full bg-teal-800 text-white text-sm font-bold py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-teal-900 transition">
+            <ExternalLink size={15} /> Abrir rota completa no Google Maps
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── MODAL TRANSPORTE ─────────────────────────────────────────────────────────
+function TransporteModal({ roteiro, token, onClose, toast }) {
+  const [tipo, setTipo] = useState("aviao");
+  const [showVoos, setShowVoos] = useState(false);
+
+  const tipos = [
+    { id: "aviao",   label: "Avião",    Icon: Plane,       desc: "Buscar passagens aéreas" },
+    { id: "carro",   label: "Carro",    Icon: Navigation,  desc: "Calcular combustível e pedágios" },
+    { id: "onibus",  label: "Ônibus",   Icon: Route,       desc: "Linhas interestaduais" },
+  ];
+
+  const [origem, setOrigem] = useState("");
+  const [combustivel, setCombustivel] = useState({ consumo: "10", preco: "5.80" });
+  const [distanciaKm, setDistanciaKm] = useState("");
+  const [custoEstimado, setCustoEstimado] = useState(null);
+
+  const calcularCarro = () => {
+    const km = parseFloat(distanciaKm);
+    const consumo = parseFloat(combustivel.consumo);
+    const preco = parseFloat(combustivel.preco);
+    if (!km || !consumo || !preco) return toast("Preencha todos os campos.", "error");
+    const litros = km / consumo;
+    const custo = litros * preco;
+    setCustoEstimado(custo.toFixed(2));
+  };
+
+  if (showVoos) return <VoosModal roteiro={roteiro} token={token} onClose={() => setShowVoos(false)} />;
+
+  return (
+    <div className="fixed inset-0 z-[150] flex items-end justify-center bg-black/40" onClick={onClose}>
+      <div className="bg-white rounded-t-3xl w-full max-w-sm p-5 pb-8 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-slate-800 font-bold text-base flex items-center gap-2">
+            <Plane size={18} className="text-teal-700" />Transporte
+          </h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center"><X size={16} /></button>
+        </div>
+
+        <div className="flex gap-2 mb-4">
+          {tipos.map(t => (
+            <button key={t.id} onClick={() => setTipo(t.id)}
+              className={`flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-semibold transition border ${
+                tipo === t.id ? "bg-teal-800 text-white border-teal-800" : "bg-white text-slate-600 border-slate-200"
+              }`}>
+              <t.Icon size={18} strokeWidth={1.8} />
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {tipo === "aviao" && (
+          <div>
+            <p className="text-slate-500 text-xs mb-3">{tipos[0].desc}</p>
+            <button onClick={() => setShowVoos(true)}
+              className="w-full bg-teal-800 text-white text-sm font-bold py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-teal-900 transition">
+              <Search size={15} /> Buscar passagens aéreas
+            </button>
+          </div>
+        )}
+
+        {tipo === "carro" && (
+          <div className="flex flex-col gap-3">
+            <p className="text-slate-500 text-xs">Calcule o custo estimado de combustível para sua viagem.</p>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-slate-600 text-xs font-semibold">Distância total (km)</label>
+              <input type="number" placeholder="Ex: 350" value={distanciaKm} onChange={e => setDistanciaKm(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-teal-400" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-slate-600 text-xs font-semibold">Consumo (km/l)</label>
+                <input type="number" value={combustivel.consumo} onChange={e => setCombustivel(p => ({...p, consumo: e.target.value}))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-teal-400" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-slate-600 text-xs font-semibold">Preço do litro (R$)</label>
+                <input type="number" value={combustivel.preco} onChange={e => setCombustivel(p => ({...p, preco: e.target.value}))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-teal-400" />
+              </div>
+            </div>
+            <button onClick={calcularCarro} className="w-full bg-teal-800 text-white text-sm font-bold py-3 rounded-2xl hover:bg-teal-900 transition">
+              Calcular custo
+            </button>
+            {custoEstimado && (
+              <div className="bg-teal-50 border border-teal-200 rounded-2xl p-4 text-center">
+                <p className="text-teal-600 text-xs mb-1">Custo estimado de combustível</p>
+                <p className="text-teal-800 text-2xl font-bold">R$ {custoEstimado}</p>
+                <p className="text-teal-500 text-xs mt-1">ida e volta: R$ {(parseFloat(custoEstimado)*2).toFixed(2)}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {tipo === "onibus" && (
+          <div className="flex flex-col gap-3">
+            <p className="text-slate-500 text-xs mb-2">Consulte rotas de ônibus para a região.</p>
+            <button onClick={() => window.open(`https://www.buscaonibus.com.br/busca?destino=${encodeURIComponent(roteiro.regiao_nome || "Rio Grande do Sul")}`, "_blank")}
+              className="w-full flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 hover:bg-slate-100 transition">
+              <div className="w-9 h-9 rounded-xl bg-teal-800 flex items-center justify-center flex-shrink-0">
+                <Route size={18} className="text-white" />
+              </div>
+              <div className="text-left">
+                <p className="text-slate-800 font-semibold text-sm">BuscaÔnibus</p>
+                <p className="text-slate-400 text-xs">Buscar passagens para {roteiro.regiao_nome}</p>
+              </div>
+              <ExternalLink size={14} className="text-slate-400 ml-auto" />
+            </button>
+            <button onClick={() => window.open("https://www.clickbus.com.br/", "_blank")}
+              className="w-full flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 hover:bg-slate-100 transition">
+              <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0">
+                <Route size={18} className="text-white" />
+              </div>
+              <div className="text-left">
+                <p className="text-slate-800 font-semibold text-sm">Clickbus</p>
+                <p className="text-slate-400 text-xs">Comparar preços de passagens</p>
+              </div>
+              <ExternalLink size={14} className="text-slate-400 ml-auto" />
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── MODAL HOSPEDAGEM ─────────────────────────────────────────────────────────
+function HospedagemModal({ roteiro, onClose }) {
+  const noites = roteiro.dias ? Math.max(roteiro.dias.length - 1, 1) : 1;
+  const [tipo, setTipo] = useState("hotel");
+  const [preco, setPreco] = useState("");
+  const [hospedes, setHospedes] = useState(1);
+  const total = preco ? (parseFloat(preco) * noites).toFixed(2) : null;
+  const porPessoa = total && hospedes > 1 ? (parseFloat(total) / hospedes).toFixed(2) : null;
+
+  const tipos = [
+    { id: "hotel",    label: "Hotel",    emoji: "🏨" },
+    { id: "pousada",  label: "Pousada",  emoji: "🏡" },
+    { id: "hostel",   label: "Hostel",   emoji: "🛏️" },
+    { id: "airbnb",   label: "Airbnb",   emoji: "🔑" },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-[150] flex items-end justify-center bg-black/40" onClick={onClose}>
+      <div className="bg-white rounded-t-3xl w-full max-w-sm p-5 pb-8 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-slate-800 font-bold text-base flex items-center gap-2">
+            <Landmark size={18} className="text-teal-700" />Hospedagem
+          </h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center"><X size={16} /></button>
+        </div>
+
+        <div className="bg-teal-50 rounded-2xl px-4 py-3 mb-4 flex items-center justify-between">
+          <span className="text-teal-700 text-xs font-semibold flex items-center gap-1"><Calendar size={13} />{noites} noite{noites > 1 ? "s" : ""}</span>
+          <span className="text-teal-600 text-xs">{roteiro.data_inicio} → {roteiro.data_fim}</span>
+        </div>
+
+        <div className="grid grid-cols-4 gap-2 mb-4">
+          {tipos.map(t => (
+            <button key={t.id} onClick={() => setTipo(t.id)}
+              className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-semibold transition border ${
+                tipo === t.id ? "bg-teal-800 text-white border-teal-800" : "bg-white text-slate-600 border-slate-200"
+              }`}>
+              <span className="text-base">{t.emoji}</span>{t.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-slate-600 text-xs font-semibold">Valor por noite (R$)</label>
+            <input type="number" placeholder="Ex: 150" value={preco} onChange={e => setPreco(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-teal-400" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-slate-600 text-xs font-semibold">Número de hóspedes</label>
+            <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+              <button onClick={() => setHospedes(v => Math.max(1, v - 1))} className="w-6 h-6 rounded-lg bg-white border border-slate-200 flex items-center justify-center"><Minus size={12} /></button>
+              <span className="flex-1 text-center text-sm font-semibold text-slate-800">{hospedes}</span>
+              <button onClick={() => setHospedes(v => v + 1)} className="w-6 h-6 rounded-lg bg-white border border-slate-200 flex items-center justify-center"><Plus size={12} /></button>
+            </div>
+          </div>
+
+          {total && (
+            <div className="bg-teal-50 border border-teal-200 rounded-2xl p-4">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-teal-600 text-xs">Total ({noites} noites)</span>
+                <span className="text-teal-800 font-bold text-lg">R$ {total}</span>
+              </div>
+              {porPessoa && (
+                <div className="flex justify-between items-center">
+                  <span className="text-teal-600 text-xs">Por pessoa</span>
+                  <span className="text-teal-700 font-semibold text-sm">R$ {porPessoa}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <button onClick={() => window.open(`https://www.booking.com/search.html?ss=${encodeURIComponent(roteiro.regiao_nome || "Rio Grande do Sul")}&checkin=${roteiro.data_inicio}&checkout=${roteiro.data_fim}`, "_blank")}
+            className="w-full bg-blue-600 text-white text-sm font-bold py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-700 transition mt-1">
+            <ExternalLink size={15} /> Buscar no Booking.com
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── MODAL ALTERAR DESTINO ────────────────────────────────────────────────────
+function AlterarDestinoModal({ roteiro, token, onClose, toast, onAtualizar }) {
+  const [regioes, setRegioes] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/regioes", { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json()).then(d => { if (Array.isArray(d)) setRegioes(d); });
+  }, []);
+
+  const confirmar = async () => {
+    if (!selected) return;
+    setLoading(true);
+    const res = await fetch(`/api/roteiros/${roteiro.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ regiao_id: selected.id }),
+    }).then(r => r.json());
+    setLoading(false);
+    if (res.error) return toast(res.error, "error");
+    toast("Destino alterado!");
+    onAtualizar();
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[150] flex items-end justify-center bg-black/40" onClick={onClose}>
+      <div className="bg-white rounded-t-3xl w-full max-w-sm p-5 pb-8 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-slate-800 font-bold text-base flex items-center gap-2">
+            <MapPin size={18} className="text-teal-700" />Alterar destino
+          </h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center"><X size={16} /></button>
+        </div>
+        <p className="text-slate-400 text-xs mb-4">Destino atual: <span className="text-slate-700 font-semibold">{roteiro.regiao_nome}</span></p>
+        <div className="flex flex-col gap-2 mb-4">
+          {regioes.filter(r => r.id !== roteiro.regiao_id).map(r => {
+            const RegIcon = REGION_ICONS[r.slug] || MapPin;
+            return (
+              <button key={r.id} onClick={() => setSelected(r)}
+                className={`flex items-center gap-3 rounded-2xl p-3.5 border transition text-left ${
+                  selected?.id === r.id ? "bg-teal-50 border-teal-500" : "bg-white border-slate-200 hover:border-slate-300"
+                }`}>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${selected?.id === r.id ? "bg-teal-100" : "bg-slate-100"}`}>
+                  <RegIcon size={18} className={selected?.id === r.id ? "text-teal-700" : "text-slate-500"} strokeWidth={1.8} />
+                </div>
+                <div className="flex-1">
+                  <p className={`font-semibold text-sm ${selected?.id === r.id ? "text-teal-800" : "text-slate-800"}`}>{r.nome}</p>
+                  <p className="text-slate-400 text-xs truncate">{r.descricao}</p>
+                </div>
+                {selected?.id === r.id && <CheckCircle size={18} className="text-teal-600 flex-shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+        <button onClick={confirmar} disabled={!selected || loading}
+          className="w-full bg-teal-800 text-white text-sm font-bold py-3.5 rounded-2xl disabled:opacity-40 hover:bg-teal-900 transition flex items-center justify-center gap-2">
+          {loading ? <RefreshCw size={16} className="animate-spin" /> : <Check size={16} />}
+          Confirmar destino
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ItineraryScreen({ setScreen, roteiro: roteiroInicial, token }) {
   const [roteiro, setRoteiro] = useState(roteiroInicial);
   const [viajantes, setViajantes] = useState(1);
   const [orcamento, setOrcamento] = useState("");
   const [showShare, setShowShare] = useState(false);
-  const [showVoos, setShowVoos] = useState(false);
+  const [showTransporte, setShowTransporte] = useState(false);
   const [showKm, setShowKm] = useState(false);
+  const [showHospedagem, setShowHospedagem] = useState(false);
+  const [showAlterarDestino, setShowAlterarDestino] = useState(false);
+  const [showResumo, setShowResumo] = useState(false);
+  const [mapaDia, setMapaDia] = useState(null);
   const { show, el: toastEl } = useToast();
 
   if (!roteiro) return (
@@ -941,18 +1378,17 @@ function ItineraryScreen({ setScreen, roteiro: roteiroInicial, token }) {
   );
 
   const custoTotal = Number(roteiro.custo_total);
-  const custoPorPessoa = viajantes > 1 ? (custoTotal / viajantes).toFixed(2) : null;
+  const custoPorPessoa = viajantes > 0 ? (custoTotal / viajantes).toFixed(2) : null;
   const acima = orcamento && custoTotal > Number(orcamento);
   const imgHero = IMG_FALLBACK[roteiro.regiao_slug] || IMG_FALLBACK["serra-gaucha"];
 
-  // CT-006: Exportar como TXT
   const exportar = async () => {
     const res = await api.exportarRoteiro(token, roteiro.id);
     if (!res.ok) { show("Erro ao exportar.", "error"); return; }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = `roteiro-${roteiro.id}.txt`; a.click();
+    a.href = url; a.download = `roteiro-${roteiro.id}.pdf`; a.click();
     URL.revokeObjectURL(url);
     show("Roteiro exportado!");
   };
@@ -965,48 +1401,48 @@ function ItineraryScreen({ setScreen, roteiro: roteiroInicial, token }) {
   return (
     <PageWrapper screen="home" setScreen={setScreen}>
       {toastEl}
-      {showShare && <ShareModal roteiro={roteiro} token={token} onClose={() => setShowShare(false)} />}
-      {showVoos  && <VoosModal  roteiro={roteiro} token={token} onClose={() => setShowVoos(false)} />}
-      {showKm    && <KmModal    roteiro={roteiro} token={token} onClose={() => setShowKm(false)} />}
+      {showShare       && <ShareModal roteiro={roteiro} token={token} onClose={() => setShowShare(false)} />}
+      {showTransporte  && <TransporteModal roteiro={roteiro} token={token} onClose={() => setShowTransporte(false)} toast={show} />}
+      {showKm          && <KmModal roteiro={roteiro} token={token} onClose={() => setShowKm(false)} />}
+      {showHospedagem  && <HospedagemModal roteiro={roteiro} onClose={() => setShowHospedagem(false)} />}
+      {showAlterarDestino && <AlterarDestinoModal roteiro={roteiro} token={token} onClose={() => setShowAlterarDestino(false)} toast={show} onAtualizar={recarregar} />}
+      {mapaDia         && <MapaDiaModal dia={mapaDia} onClose={() => setMapaDia(null)} />}
+      {showResumo      && <ResumoFinanceiroModal roteiro={roteiro} token={token} onClose={() => setShowResumo(false)} />}
 
       <div className="relative h-52">
         <img src={imgHero} alt={"Foto de " + roteiro.regiao_nome} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
         <div className="absolute top-4 left-4 right-4 flex justify-between">
-          <button onClick={() => setScreen("home")}
-            className="w-9 h-9 rounded-xl bg-black/35 flex items-center justify-center">
+          <button onClick={() => setScreen("home")} className="w-9 h-9 rounded-xl bg-black/35 flex items-center justify-center">
             <ArrowLeft size={18} color="white" />
           </button>
           <div className="flex gap-2">
-            {/* CT-027: Buscar voos */}
-            <button onClick={() => setShowVoos(true)} title="Buscar voos"
-              className="w-9 h-9 rounded-xl bg-black/35 flex items-center justify-center">
+            <button onClick={() => setShowTransporte(true)} title="Transporte" className="w-9 h-9 rounded-xl bg-black/35 flex items-center justify-center">
               <Plane size={16} color="white" />
             </button>
-            {/* CT-008: km percorridos */}
-            <button onClick={() => setShowKm(true)} title="Distância do roteiro"
-              className="w-9 h-9 rounded-xl bg-black/35 flex items-center justify-center">
+            <button onClick={() => setShowKm(true)} title="Distância" className="w-9 h-9 rounded-xl bg-black/35 flex items-center justify-center">
               <RouteIcon size={16} color="white" />
             </button>
-            {/* CT-006: Exportar */}
-            <button onClick={exportar} title="Exportar roteiro"
-              className="w-9 h-9 rounded-xl bg-black/35 flex items-center justify-center">
+            <button onClick={exportar} title="Exportar" className="w-9 h-9 rounded-xl bg-black/35 flex items-center justify-center">
               <Download size={16} color="white" />
             </button>
-            {/* CT-019: Compartilhar */}
-            <button onClick={() => setShowShare(true)} title="Compartilhar"
-              className="w-9 h-9 rounded-xl bg-black/35 flex items-center justify-center">
+            <button onClick={() => setShowShare(true)} title="Compartilhar" className="w-9 h-9 rounded-xl bg-black/35 flex items-center justify-center">
               <Share2 size={16} color="white" />
             </button>
           </div>
         </div>
-        <div className="absolute bottom-4 left-4">
+        <div className="absolute bottom-4 left-4 right-4">
           <div className="flex items-center gap-1 text-white/70 text-xs mb-1"><MapPin size={11} />{roteiro.regiao_nome}</div>
-          <h1 className="text-white text-lg font-bold">{roteiro.titulo}</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-white text-lg font-bold">{roteiro.titulo}</h1>
+            <button onClick={() => setShowAlterarDestino(true)}
+              className="text-white/70 text-xs bg-black/30 px-2.5 py-1 rounded-lg flex items-center gap-1 hover:bg-black/50 transition">
+              <MapPin size={11} /> Alterar destino
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* CT-005: Custo por pessoa + CT-029: Limite de orçamento */}
       <div className="mx-4 -mt-5 relative z-10 bg-white rounded-2xl border border-slate-100 shadow-md p-4 mb-3">
         <div className="flex justify-between items-center mb-2">
           <span className="bg-amber-50 text-amber-700 text-xs font-semibold px-2.5 py-1 rounded-full capitalize flex items-center gap-1">
@@ -1026,57 +1462,195 @@ function ItineraryScreen({ setScreen, roteiro: roteiroInicial, token }) {
           <Calendar size={12} /> {roteiro.data_inicio} → {roteiro.data_fim}
         </div>
 
-        {/* Viajantes */}
         <div className="flex items-center gap-2 mb-2 pt-2 border-t border-slate-100">
           <User size={13} className="text-slate-400" />
           <span className="text-slate-600 text-xs flex-1">Viajantes</span>
-          <button onClick={() => setViajantes(v => Math.max(1, v - 1))}
-            className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center"><Minus size={12} /></button>
+          <button onClick={() => setViajantes(v => Math.max(1, v - 1))} className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center"><Minus size={12} /></button>
           <span className="text-slate-800 font-semibold text-sm w-5 text-center">{viajantes}</span>
-          <button onClick={() => setViajantes(v => v + 1)}
-            className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center"><Plus size={12} /></button>
-          {custoPorPessoa && (
-            <span className="text-teal-700 text-xs font-semibold ml-1">≈ R$ {custoPorPessoa}/pessoa</span>
-          )}
+          <button onClick={() => setViajantes(v => v + 1)} className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center"><Plus size={12} /></button>
+          {custoPorPessoa && <span className="text-teal-700 text-xs font-semibold ml-1">≈ R$ {custoPorPessoa}/pessoa</span>}
         </div>
 
-        {/* Limite de orçamento */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mb-3">
           <BarChart2 size={13} className="text-slate-400" />
           <span className="text-slate-600 text-xs">Meu orçamento:</span>
           <input type="number" placeholder="Ex: 500" value={orcamento} onChange={e => setOrcamento(e.target.value)}
             className="w-24 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-400" />
           <span className="text-slate-400 text-xs">BRL</span>
         </div>
+
+        <div className="flex gap-2 pt-2 border-t border-slate-100">
+          <button onClick={() => setShowResumo(true)}
+            className="flex-1 flex items-center justify-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-600 text-xs font-semibold py-2 rounded-xl hover:bg-slate-100 transition">
+            <BarChart2 size={13} /> Resumo
+          </button>
+          <button onClick={() => setShowHospedagem(true)}
+            className="flex-1 flex items-center justify-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-600 text-xs font-semibold py-2 rounded-xl hover:bg-slate-100 transition">
+            <Landmark size={13} /> Hotel
+          </button>
+          <button onClick={() => setShowTransporte(true)}
+            className="flex-1 flex items-center justify-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-600 text-xs font-semibold py-2 rounded-xl hover:bg-slate-100 transition">
+            <Plane size={13} /> Transporte
+          </button>
+          <button onClick={() => setShowKm(true)}
+            className="flex-1 flex items-center justify-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-600 text-xs font-semibold py-2 rounded-xl hover:bg-slate-100 transition">
+            <RouteIcon size={13} /> Distância
+          </button>
+        </div>
       </div>
 
       <div className="px-4 pb-8 flex flex-col gap-5">
         {(roteiro.dias || []).map(dia => (
-          <DiaSection key={dia.id} dia={dia} token={token} onRecarregar={recarregar} toast={show} />
+          <DiaSection key={dia.id} dia={dia} token={token} onRecarregar={recarregar} toast={show} onVerMapa={() => setMapaDia(dia)} />
         ))}
       </div>
     </PageWrapper>
   );
 }
 
-function DiaSection({ dia, token, onRecarregar, toast }) {
-  const otimizar = async () => {
-    const res = await api.otimizarDia(token, dia.id);
+// ─── MODAL ADICIONAR ITEM ────────────────────────────────────────────────────
+function AddItemModal({ dia, token, onClose, onRecarregar, toast }) {
+  const [busca, setBusca] = useState("");
+  const [resultados, setResultados] = useState([]);
+  const [buscando, setBuscando] = useState(false);
+  const [horario, setHorario] = useState("09:00");
+  const [modo, setModo] = useState("busca");
+  const [nomeManual, setNomeManual] = useState("");
+  const [custoManual, setCustoManual] = useState("");
+  const debRef = useRef(null);
+
+  useEffect(() => {
+    clearTimeout(debRef.current);
+    if (!busca.trim()) { setResultados([]); return; }
+    debRef.current = setTimeout(async () => {
+      setBuscando(true);
+      const res = await fetch(`/api/roteiros/locais/buscar?q=${encodeURIComponent(busca)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(r => r.json());
+      setBuscando(false);
+      if (Array.isArray(res)) setResultados(res);
+    }, 400);
+  }, [busca]);
+
+  const adicionar = async (local_id, nome) => {
+    const res = await fetch(`/api/roteiros/dias/${dia.id}/itens`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ local_id, horario }),
+    }).then(r => r.json());
     if (res.error) return toast(res.error, "error");
-    toast("Rota otimizada!");
-    onRecarregar();
+    toast(`"${nome}" adicionado!`);
+    onRecarregar(); onClose();
+  };
+
+  const adicionarManual = async () => {
+    if (!nomeManual.trim()) return toast("Informe o nome da atividade.", "error");
+    const res = await fetch(`/api/roteiros/dias/${dia.id}/itens`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ nome_manual: nomeManual, horario }),
+    }).then(r => r.json());
+    if (res.error) return toast(res.error, "error");
+    toast(`"${nomeManual}" adicionado!`);
+    onRecarregar(); onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[150] flex items-end justify-center bg-black/40" onClick={onClose}>
+      <div className="bg-white rounded-t-3xl w-full max-w-sm p-5 pb-8 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-slate-800 font-bold text-base flex items-center gap-2">
+            <Plus size={18} className="text-teal-700" />Adicionar ao Dia {dia.numero_dia}
+          </h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center"><X size={16} /></button>
+        </div>
+        <div className="flex gap-2 mb-4">
+          <button onClick={() => setModo("busca")} className={`flex-1 py-2 rounded-xl text-sm font-semibold transition ${modo === "busca" ? "bg-teal-800 text-white" : "bg-slate-100 text-slate-600"}`}>
+            Buscar local
+          </button>
+          <button onClick={() => setModo("manual")} className={`flex-1 py-2 rounded-xl text-sm font-semibold transition ${modo === "manual" ? "bg-teal-800 text-white" : "bg-slate-100 text-slate-600"}`}>
+            Manual
+          </button>
+        </div>
+        <div className="mb-3">
+          <label className="text-slate-600 text-xs font-semibold mb-1 block">Horário</label>
+          <input type="time" value={horario} onChange={e => setHorario(e.target.value)}
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-teal-400" />
+        </div>
+        {modo === "busca" ? (
+          <>
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 mb-3">
+              <Search size={14} className="text-slate-400 flex-shrink-0" />
+              <input placeholder="Nome, categoria..." value={busca} onChange={e => setBusca(e.target.value)}
+                className="flex-1 text-sm text-slate-700 focus:outline-none bg-transparent" />
+              {busca && <button onClick={() => setBusca("")} className="text-slate-400"><X size={13} /></button>}
+            </div>
+            {buscando && <p className="text-slate-400 text-sm text-center py-3">Buscando…</p>}
+            {!buscando && busca && resultados.length === 0 && <p className="text-slate-400 text-sm text-center py-3">Nenhum resultado.</p>}
+            <div className="flex flex-col gap-2">
+              {resultados.map(l => (
+                <button key={l.id} onClick={() => adicionar(l.id, l.nome)}
+                  className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl p-3 hover:border-teal-400 hover:bg-teal-50 transition text-left">
+                  <div className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center flex-shrink-0">
+                    <MapPin size={16} className="text-teal-700" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-800 font-semibold text-sm truncate">{l.nome}</p>
+                    <p className="text-slate-400 text-xs">{l.cidade} · {l.categoria}</p>
+                  </div>
+                  {l.custo_medio > 0 && <span className="text-teal-700 text-xs font-semibold flex-shrink-0">R$ {Number(l.custo_medio).toFixed(0)}</span>}
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-slate-600 text-xs font-semibold">Nome da atividade</label>
+              <input type="text" placeholder="Ex: Almoço no restaurante X" value={nomeManual} onChange={e => setNomeManual(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-teal-400" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-slate-600 text-xs font-semibold">Custo estimado (R$) <span className="text-slate-400 font-normal">opcional</span></label>
+              <input type="number" placeholder="Ex: 50" value={custoManual} onChange={e => setCustoManual(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && adicionarManual()}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-teal-400" />
+            </div>
+            <button onClick={adicionarManual} className="w-full bg-teal-800 text-white text-sm font-bold py-3 rounded-2xl hover:bg-teal-900 transition">
+              Adicionar atividade
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DiaSection({ dia, token, onRecarregar, toast, onVerMapa }) {
+  const [showAdd, setShowAdd] = useState(false);
+
+  const custoCalculado = (dia.itens || []).reduce((s, i) => s + Number(i.custo_medio || 0), 0);
+
+  const otimizar = async () => {
+    const res = await fetch(`/api/roteiros/dias/${dia.id}/otimizar`, {
+      method: "POST", headers: { Authorization: `Bearer ${token}` }
+    }).then(r => r.json());
+    if (res.error) return toast(res.error, "error");
+    toast("Rota otimizada!"); onRecarregar();
   };
 
   const limpar = async () => {
     if (!window.confirm("Limpar todos os itens deste dia?")) return;
-    const res = await api.limparDia(token, dia.id);
+    const res = await fetch(`/api/roteiros/dias/${dia.id}/itens`, {
+      method: "DELETE", headers: { Authorization: `Bearer ${token}` }
+    }).then(r => r.json());
     if (res.error) return toast(res.error, "error");
-    toast("Dia limpo.");
-    onRecarregar();
+    toast("Dia limpo."); onRecarregar();
   };
 
   return (
     <div>
+      {showAdd && <AddItemModal dia={dia} token={token} onClose={() => setShowAdd(false)} onRecarregar={onRecarregar} toast={toast} />}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-full bg-teal-800 text-white text-xs font-bold flex items-center justify-center">{dia.numero_dia}</div>
@@ -1085,54 +1659,80 @@ function DiaSection({ dia, token, onRecarregar, toast }) {
             <p className="text-slate-400 text-xs">{dia.data}</p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap justify-end">
           <span className="text-slate-600 text-xs font-semibold flex items-center gap-1">
-            <Wallet size={12} /> R$ {Number(dia.custo_dia).toFixed(2)}
+            <Wallet size={12} /> R$ {custoCalculado.toFixed(2)}
           </span>
-          <button onClick={otimizar}
-            className="text-xs bg-teal-50 text-teal-700 px-2 py-1 rounded-lg font-medium flex items-center gap-1">
+          <button onClick={onVerMapa} className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-lg font-medium flex items-center gap-1">
+            <Map size={11} /> Ver rota
+          </button>
+          <button onClick={() => setShowAdd(true)} className="text-xs bg-teal-800 text-white px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1 shadow-sm hover:bg-teal-900 transition">
+            <Plus size={12} /> Adicionar atividade
+          </button>
+          <button onClick={otimizar} className="text-xs bg-teal-50 text-teal-700 px-2 py-1 rounded-lg font-medium flex items-center gap-1">
             <Route size={11} /> Otimizar
           </button>
-          <button onClick={limpar}
-            className="text-xs bg-red-50 text-red-500 px-2 py-1 rounded-lg font-medium flex items-center gap-1">
+          <button onClick={limpar} className="text-xs bg-red-50 text-red-500 px-2 py-1 rounded-lg font-medium flex items-center gap-1">
             <Trash2 size={11} /> Limpar
           </button>
         </div>
       </div>
       <div className="flex flex-col gap-3">
         {(dia.itens || []).map((item, idx) => (
-          <ItemCard key={item.id || idx} item={item} token={token} onRecarregar={onRecarregar} toast={toast} />
+          <ItemCard key={item.id || idx} item={item} token={token} onRecarregar={onRecarregar} toast={toast}
+            diaId={dia.id} totalItens={(dia.itens || []).length} idx={idx} />
         ))}
+        {(dia.itens || []).length === 0 && (
+          <button onClick={() => setShowAdd(true)}
+            className="w-full border-2 border-dashed border-slate-200 rounded-2xl py-6 text-slate-400 text-sm flex flex-col items-center gap-1.5 hover:border-teal-300 hover:text-teal-600 transition">
+            <Plus size={20} />Adicionar atividade ao Dia {dia.numero_dia}
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
-function ItemCard({ item, token, onRecarregar, toast }) {
+function ItemCard({ item, token, onRecarregar, toast, diaId, totalItens, idx }) {
   const [nota, setNota] = useState(item.nota || "");
   const [mostraNota, setMostraNota] = useState(false);
   const [concluido, setConcluido] = useState(!!item.concluido);
   const [salvando, setSalvando] = useState(false);
+  const [editandoCusto, setEditandoCusto] = useState(false);
+  const [custoEdit, setCustoEdit] = useState(Number(item.custo_medio || 0).toFixed(2));
+
+  const call = (path, opts = {}) =>
+    fetch(path, { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, ...opts }).then(r => r.json());
 
   const toggleConcluido = async () => {
     const novo = !concluido;
     setConcluido(novo);
-    await api.atualizarItem(token, item.id, { concluido: novo });
+    await call(`/api/roteiros/itens/${item.id}`, { method: "PUT", body: JSON.stringify({ concluido: novo }) });
   };
 
   const salvarNota = async () => {
     setSalvando(true);
-    const res = await api.atualizarItem(token, item.id, { nota });
+    const res = await call(`/api/roteiros/itens/${item.id}`, { method: "PUT", body: JSON.stringify({ nota }) });
     setSalvando(false);
     if (res.error) return toast(res.error, "error");
-    toast("Nota salva!");
-    setMostraNota(false);
+    toast("Nota salva!"); setMostraNota(false);
+  };
+
+  const salvarCusto = async () => {
+    const res = await call(`/api/roteiros/itens/${item.id}`, { method: "PUT", body: JSON.stringify({ custo_medio: parseFloat(custoEdit) || 0 }) });
+    if (res.error) return toast(res.error, "error");
+    toast("Custo atualizado!"); setEditandoCusto(false); onRecarregar();
   };
 
   const remover = async () => {
-    const res = await api.removerItem(token, item.id);
+    const res = await call(`/api/roteiros/itens/${item.id}`, { method: "DELETE" });
     if (res.error) return toast(res.error, "error");
-    toast("Item removido.");
+    toast("Item removido."); onRecarregar();
+  };
+
+  const mover = async (direcao) => {
+    const novaOrdem = direcao === "up" ? idx - 1 : idx + 1;
+    await call(`/api/roteiros/itens/${item.id}`, { method: "PUT", body: JSON.stringify({ ordem: novaOrdem }) });
     onRecarregar();
   };
 
@@ -1152,15 +1752,40 @@ function ItemCard({ item, token, onRecarregar, toast }) {
         </div>
       )}
       <div className="p-4">
-        <div className="flex justify-between items-start mb-1">
-          <h4 className={`text-slate-800 font-bold text-sm ${concluido ? "line-through text-slate-400" : ""}`}>
+        <div className="flex justify-between items-start mb-1 gap-1">
+          <h4 className={`text-slate-800 font-bold text-sm flex-1 ${concluido ? "line-through text-slate-400" : ""}`}>
             {item.local_nome || item.nome_manual || "Atividade"}
           </h4>
-          {item.cidade && <span className="text-slate-400 text-xs ml-2 shrink-0 flex items-center gap-0.5"><MapPin size={10} />{item.cidade}</span>}
+          <div className="flex gap-1 flex-shrink-0">
+            {idx > 0 && (
+              <button onClick={() => mover("up")} title="Mover para cima"
+                className="w-5 h-5 rounded bg-slate-100 text-slate-500 flex items-center justify-center text-xs hover:bg-slate-200">▲</button>
+            )}
+            {totalItens > 1 && idx < totalItens - 1 && (
+              <button onClick={() => mover("down")} title="Mover para baixo"
+                className="w-5 h-5 rounded bg-slate-100 text-slate-500 flex items-center justify-center text-xs hover:bg-slate-200">▼</button>
+            )}
+          </div>
+          {item.cidade && <span className="text-slate-400 text-xs flex-shrink-0 flex items-center gap-0.5"><MapPin size={10} />{item.cidade}</span>}
         </div>
         {item.descricao && <p className="text-slate-500 text-xs leading-relaxed mb-3">{item.descricao}</p>}
-        <div className="flex gap-1.5 mb-3 flex-wrap">
-          {item.custo_medio > 0 && <Tag Icon={Wallet} color="teal">R$ {Number(item.custo_medio).toFixed(2)}</Tag>}
+
+        <div className="flex gap-1.5 mb-3 flex-wrap items-center">
+          {editandoCusto ? (
+            <div className="flex items-center gap-1.5">
+              <span className="text-teal-700 text-xs font-semibold">R$</span>
+              <input type="number" value={custoEdit} onChange={e => setCustoEdit(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && salvarCusto()}
+                className="w-20 bg-teal-50 border border-teal-300 rounded-lg px-2 py-0.5 text-xs text-teal-800 focus:outline-none" autoFocus />
+              <button onClick={salvarCusto} className="w-5 h-5 bg-teal-700 text-white rounded flex items-center justify-center"><Check size={11} /></button>
+              <button onClick={() => setEditandoCusto(false)} className="w-5 h-5 bg-slate-200 text-slate-600 rounded flex items-center justify-center"><X size={11} /></button>
+            </div>
+          ) : (
+            <button onClick={() => setEditandoCusto(true)} title="Clique para editar o custo"
+              className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium bg-teal-50 text-teal-700 hover:bg-teal-100 transition">
+              <Wallet size={11} />R$ {Number(item.custo_medio || custoEdit || 0).toFixed(2)} <span className="text-teal-500 text-[10px]">✎</span>
+            </button>
+          )}
           {item.duracao_estimada && <Tag Icon={Clock} color="slate">{item.duracao_estimada}</Tag>}
           {concluido && <Tag Icon={Check} color="green">Realizado</Tag>}
         </div>
@@ -1279,12 +1904,19 @@ function HistoryScreen({ setScreen, token, setRoteiroAtivo }) {
           ))}
         </div>
 
-        {/* CT-020: Filtro */}
-        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5">
-          <Filter size={14} className="text-slate-400 flex-shrink-0" />
-          <input placeholder="Filtrar por região ou nome…" value={filtro} onChange={e => setFiltro(e.target.value)}
-            className="flex-1 text-sm text-slate-700 placeholder-slate-400 focus:outline-none bg-transparent" />
-          {filtro && <button onClick={() => setFiltro("")} className="text-slate-400"><X size={14} /></button>}
+        {/* CT-092/099: Campo de pesquisa — visível e digitável */}
+        <div className="flex flex-col gap-1">
+          <label className="text-slate-500 text-xs font-semibold">Pesquisar viagens</label>
+          <div className="flex items-center gap-2 bg-white border-2 border-teal-200 rounded-xl px-3.5 py-3 focus-within:border-teal-500 transition">
+            <Search size={16} className="text-teal-500 flex-shrink-0" />
+            <input
+              placeholder="Digite o nome da região ou roteiro…"
+              value={filtro}
+              onChange={e => setFiltro(e.target.value)}
+              className="flex-1 text-sm text-slate-700 placeholder-slate-400 focus:outline-none bg-transparent"
+            />
+            {filtro && <button onClick={() => setFiltro("")} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>}
+          </div>
         </div>
 
         {roteiros.length === 0
