@@ -25,9 +25,6 @@ async function seed() {
   const regId = {};
   for (const r of regsRows) regId[r.slug] = r.id;
 
-  // Limpa locais existentes para recriar com custos corretos
-  await query('DELETE FROM locais');
-
   const locais = [
     // ── Serra Gaúcha ──────────────────────────────────────────────────────────
     [regId['serra-gaucha'], 'Parque do Caracol',       'Canela',           'Cachoeira de 131m em plena mata nativa. Trilhas, tirolesa e mirante.',         -29.3289, -50.8497, 38,  4.8, '3-4 horas',  'natureza'],

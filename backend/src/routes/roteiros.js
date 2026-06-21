@@ -132,6 +132,11 @@ router.get('/', async (req, res) => {
       ORDER BY r.criado_em DESC
     `, [req.usuario.id]);
 
+    roteiros.forEach(r => {
+      r.data_inicio = formatarDataLocal(r.data_inicio);
+      r.data_fim    = formatarDataLocal(r.data_fim);
+    });
+
     return res.json(roteiros);
   } catch (err) {
     console.error(err);
@@ -148,6 +153,41 @@ router.get('/:id', async (req, res) => {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao buscar roteiro.' });
+  }
+});
+
+// ── CT-063: Editar roteiro existente (alterar destino, título, orçamento) ────
+// PUT /api/roteiros/:id
+router.put('/:id', async (req, res) => {
+  try {
+    const [existente] = await query(
+      'SELECT id, regiao_id FROM roteiros WHERE id = ? AND usuario_id = ?',
+      [req.params.id, req.usuario.id]
+    );
+    if (!existente) return res.status(404).json({ error: 'Roteiro não encontrado.' });
+
+    const { regiao_id, titulo, nivel_orcamento } = req.body;
+    const fields = [];
+    const vals = [];
+
+    if (regiao_id !== undefined) {
+      const [regiao] = await query('SELECT nome FROM regioes WHERE id = ?', [regiao_id]);
+      if (!regiao) return res.status(400).json({ error: 'Região inválida.' });
+      fields.push('regiao_id = ?'); vals.push(regiao_id);
+    }
+    if (titulo !== undefined)          { fields.push('titulo = ?');          vals.push(titulo); }
+    if (nivel_orcamento !== undefined) { fields.push('nivel_orcamento = ?'); vals.push(nivel_orcamento); }
+
+    if (fields.length === 0) return res.status(400).json({ error: 'Nenhum campo para atualizar.' });
+
+    vals.push(req.params.id);
+    await query(`UPDATE roteiros SET ${fields.join(', ')} WHERE id = ?`, vals);
+
+    const roteiroAtualizado = await getRoteiroCompleto(req.params.id, req.usuario.id);
+    return res.json(roteiroAtualizado);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao atualizar roteiro.' });
   }
 });
 
@@ -302,6 +342,17 @@ router.delete('/:id', async (req, res) => {
 });
 
 // ── Helper: busca roteiro completo com dias e itens ──────────────────────────
+// Formata um valor Date (ou string) para 'YYYY-MM-DD', sem deslocamento de fuso
+function formatarDataLocal(valor) {
+  if (!valor) return valor;
+  if (typeof valor === 'string') return valor.split('T')[0];
+  const d = new Date(valor);
+  const ano = d.getFullYear();
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
+}
+
 async function getRoteiroCompleto(id, usuario_id = null) {
   let sql = `
     SELECT r.*, rg.nome AS regiao_nome, rg.slug AS regiao_slug
@@ -313,21 +364,26 @@ async function getRoteiroCompleto(id, usuario_id = null) {
 
   const [roteiro] = await query(sql, params);
   if (!roteiro) return null;
+  roteiro.data_inicio = formatarDataLocal(roteiro.data_inicio);
+  roteiro.data_fim    = formatarDataLocal(roteiro.data_fim);
 
   const dias = await query(
     'SELECT * FROM dias_roteiro WHERE roteiro_id = ? ORDER BY numero_dia',
     [id]
   );
+  dias.forEach(d => { d.data = formatarDataLocal(d.data); });
 
   for (const dia of dias) {
     dia.itens = await query(`
-      SELECT ir.horario, ir.ordem,
-             l.id AS local_id, l.nome AS local_nome, l.cidade,
-             l.descricao, l.custo_medio, l.avaliacao,
+      SELECT ir.id, ir.horario, ir.ordem, ir.nota, ir.concluido,
+             ir.nome_manual, ir.local_id,
+             COALESCE(ir.custo_medio, l.custo_medio, 0) AS custo_medio,
+             l.id AS local_real_id, l.nome AS local_nome, l.cidade,
+             l.descricao, l.avaliacao,
              l.duracao_estimada, l.imagem_url, l.categoria,
              l.latitude, l.longitude
       FROM itens_roteiro ir
-      JOIN locais l ON ir.local_id = l.id
+      LEFT JOIN locais l ON ir.local_id = l.id
       WHERE ir.dia_id = ?
       ORDER BY ir.ordem
     `, [dia.id]);

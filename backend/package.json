@@ -16,6 +16,8 @@
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.9.7",
     "node-fetch": "^2.7.0",
+    "pdfile": "^1.1.0",
+    "pdfkit": "^0.19.1",
     "resend": "^6.12.4"
   },
   "devDependencies": {

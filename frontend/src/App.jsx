@@ -44,16 +44,17 @@ const BUDGETS = [
 ];
 
 // ─── SHARED COMPONENTS ────────────────────────────────────────────────────────
+const NAV_ITEMS = [
+  { id: "home",    label: "Início",    Icon: Home },
+  { id: "planner", label: "Planejar",  Icon: PlusCircle },
+  { id: "history", label: "Histórico", Icon: Clock },
+  { id: "profile", label: "Perfil",    Icon: User },
+];
+
 function NavBar({ active, setScreen }) {
-  const items = [
-    { id: "home",    label: "Início",    Icon: Home },
-    { id: "planner", label: "Planejar",  Icon: PlusCircle },
-    { id: "history", label: "Histórico", Icon: Clock },
-    { id: "profile", label: "Perfil",    Icon: User },
-  ];
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 flex z-40 max-w-sm mx-auto">
-      {items.map(({ id, label, Icon }) => (
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 flex z-40 lg:hidden">
+      {NAV_ITEMS.map(({ id, label, Icon }) => (
         <button key={id} onClick={() => setScreen(id)}
           className={`flex-1 py-3 flex flex-col items-center gap-0.5 text-xs font-medium transition-colors ${
             active === id ? "text-teal-700" : "text-slate-400 hover:text-slate-600"
@@ -67,12 +68,54 @@ function NavBar({ active, setScreen }) {
   );
 }
 
-function PageWrapper({ children, noNav, screen, setScreen }) {
+function SideNav({ active, setScreen }) {
   return (
-    <div className="min-h-screen bg-slate-200 flex items-center justify-center">
-      <div className="relative w-full max-w-sm min-h-screen bg-slate-50 flex flex-col shadow-2xl">
-        <div className={`flex-1 overflow-y-auto ${noNav ? "" : "pb-20"}`}>{children}</div>
-        {!noNav && <NavBar active={screen} setScreen={setScreen} />}
+    <aside className="hidden lg:flex flex-col w-60 flex-shrink-0 bg-teal-800 min-h-screen px-4 py-6 sticky top-0 self-start">
+      <div className="flex items-center gap-2.5 px-2 mb-8">
+        <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
+          <MapPin size={18} color="white" />
+        </div>
+        <div>
+          <p className="text-white font-bold text-sm leading-tight">Conexão</p>
+          <p className="text-teal-300 text-xs leading-tight">Gaúcha</p>
+        </div>
+      </div>
+      <div className="flex flex-col gap-1">
+        {NAV_ITEMS.map(({ id, label, Icon }) => (
+          <button key={id} onClick={() => setScreen(id)}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors text-left ${
+              active === id ? "bg-white/15 text-white" : "text-teal-200 hover:bg-white/5 hover:text-white"
+            }`}>
+            <Icon size={18} strokeWidth={active === id ? 2.3 : 1.8} />
+            {label}
+          </button>
+        ))}
+      </div>
+    </aside>
+  );
+}
+
+function PageWrapper({ children, noNav, screen, setScreen }) {
+  if (noNav) {
+    // Auth screens: centered card on desktop, full-bleed on mobile
+    return (
+      <div className="min-h-screen bg-slate-200 flex items-center justify-center lg:py-10">
+        <div className="relative w-full max-w-sm lg:max-w-md min-h-screen lg:min-h-0 lg:rounded-3xl bg-slate-50 flex flex-col lg:shadow-2xl overflow-hidden">
+          {children}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="min-h-screen bg-slate-200 flex justify-center">
+      <div className="flex w-full max-w-7xl bg-slate-50 lg:shadow-2xl lg:my-0">
+        <SideNav active={screen} setScreen={setScreen} />
+        <div className="flex-1 min-w-0 flex flex-col">
+          <div className="flex-1 overflow-y-auto pb-20 lg:pb-0 w-full max-w-sm mx-auto lg:max-w-none lg:mx-0">
+            {children}
+          </div>
+        </div>
+        <NavBar active={screen} setScreen={setScreen} />
       </div>
     </div>
   );
@@ -152,9 +195,9 @@ function ShareModal({ roteiro, token, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-end lg:items-center justify-center bg-black/40" onClick={onClose}>
       {toastEl}
-      <div className="bg-white rounded-t-3xl w-full max-w-sm p-6 pb-8" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-t-3xl lg:rounded-3xl w-full max-w-sm lg:max-w-lg p-6 pb-8" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-5">
           <h3 className="text-slate-800 font-bold text-base">Compartilhar roteiro</h3>
           <button onClick={onClose} className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center"><X size={16} /></button>
@@ -236,9 +279,9 @@ function VoosModal({ roteiro, token, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-end lg:items-center justify-center bg-black/40" onClick={onClose}>
       {toastEl}
-      <div className="bg-white rounded-t-3xl w-full max-w-sm p-5 pb-8 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-t-3xl lg:rounded-3xl w-full max-w-sm lg:max-w-lg p-5 pb-8 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-slate-800 font-bold text-base flex items-center gap-2"><Plane size={18} className="text-teal-700" />Buscar voos</h3>
           <button onClick={onClose} className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center"><X size={16} /></button>
@@ -314,8 +357,8 @@ function KmModal({ roteiro, token, onClose }) {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-end justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-white rounded-t-3xl w-full max-w-sm p-6 pb-8" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[150] flex items-end lg:items-center justify-center bg-black/40 lg:p-6" onClick={onClose}>
+      <div className="bg-white rounded-t-3xl lg:rounded-3xl w-full max-w-sm lg:max-w-lg p-6 pb-8" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-5">
           <h3 className="text-slate-800 font-bold text-base flex items-center gap-2"><RouteIcon size={18} className="text-teal-700" />Distância do roteiro</h3>
           <button onClick={onClose} className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center"><X size={16} /></button>
@@ -574,7 +617,7 @@ function HomeScreen({ setScreen, usuario, token, setRoteiroAtivo }) {
   const primeiroNome = usuario?.nome_completo?.split(" ")[0] || "Viajante";
 
   useEffect(() => {
-    api.getRoteiros(token).then(data => { if (Array.isArray(data)) setRoteiros(data.slice(0, 2)); });
+    api.getRoteiros(token).then(data => { if (Array.isArray(data)) setRoteiros(data.slice(0, 6)); });
   }, [token]);
 
   // CT-099: Busca por palavra-chave
@@ -597,17 +640,17 @@ function HomeScreen({ setScreen, usuario, token, setRoteiroAtivo }) {
 
   return (
     <PageWrapper screen="home" setScreen={setScreen}>
-      <div className="bg-teal-800 px-5 pt-10 pb-5">
-        <div className="flex justify-between items-center mb-4">
+      <div className="bg-teal-800 px-5 lg:px-10 pt-10 lg:pt-8 pb-5 lg:pb-6">
+        <div className="flex justify-between items-center mb-4 max-w-3xl">
           <div>
-            <p className="text-teal-200/70 text-xs">Bom dia,</p>
-            <h1 className="text-white text-lg font-bold">{primeiroNome}</h1>
+            <p className="text-teal-200/70 text-xs lg:text-sm">Bom dia,</p>
+            <h1 className="text-white text-lg lg:text-2xl font-bold">{primeiroNome}</h1>
           </div>
           <button className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center" onClick={() => setScreen("notificacoes")}>
             <Bell size={18} color="white" strokeWidth={1.8} />
           </button>
         </div>
-        <div className="bg-white/10 rounded-2xl flex items-center gap-2.5 px-4 py-2.5 relative">
+        <div className="bg-white/10 rounded-2xl flex items-center gap-2.5 px-4 py-2.5 relative max-w-3xl lg:max-w-xl">
           <Search size={16} className="text-white/50 flex-shrink-0" />
           <input placeholder="Buscar destino ou atividade..." value={busca}
             onChange={e => setBusca(e.target.value)}
@@ -618,54 +661,56 @@ function HomeScreen({ setScreen, usuario, token, setRoteiroAtivo }) {
 
       {/* Resultados de busca */}
       {(busca.trim() || buscando) && (
-        <div className="px-4 pt-3 pb-1">
+        <div className="px-4 lg:px-10 pt-3 pb-1 max-w-3xl">
           {buscando && <p className="text-slate-400 text-sm text-center py-3">Buscando…</p>}
           {!buscando && resultados.length === 0 && busca.trim() && (
             <p className="text-slate-400 text-sm text-center py-3">Nenhum resultado para "{busca}"</p>
           )}
-          {resultados.map(l => (
-            <div key={l.id} className="flex gap-3 bg-white border border-slate-100 rounded-2xl p-3 mb-2">
-              <div className="w-12 h-12 rounded-xl bg-teal-50 flex items-center justify-center flex-shrink-0">
-                <MapPin size={18} className="text-teal-700" />
+          <div className="lg:grid lg:grid-cols-2 lg:gap-2">
+            {resultados.map(l => (
+              <div key={l.id} className="flex gap-3 bg-white border border-slate-100 rounded-2xl p-3 mb-2">
+                <div className="w-12 h-12 rounded-xl bg-teal-50 flex items-center justify-center flex-shrink-0">
+                  <MapPin size={18} className="text-teal-700" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-slate-800 font-semibold text-sm truncate">{l.nome}</p>
+                  <p className="text-slate-400 text-xs">{l.cidade} · {l.categoria}</p>
+                </div>
+                {l.avaliacao && <span className="text-amber-600 text-xs font-bold flex items-center gap-0.5"><Star size={11} />{l.avaliacao}</span>}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-slate-800 font-semibold text-sm truncate">{l.nome}</p>
-                <p className="text-slate-400 text-xs">{l.cidade} · {l.categoria}</p>
-              </div>
-              {l.avaliacao && <span className="text-amber-600 text-xs font-bold flex items-center gap-0.5"><Star size={11} />{l.avaliacao}</span>}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 
-      <div className="px-4 py-4 flex flex-col gap-4">
-        <div className="bg-teal-800 rounded-2xl px-5 py-5 relative overflow-hidden">
+      <div className="px-4 lg:px-10 py-4 lg:py-6 flex flex-col gap-4 lg:gap-6 lg:grid lg:grid-cols-3 lg:items-start lg:gap-6">
+        <div className="bg-teal-800 rounded-2xl px-5 py-5 lg:px-7 lg:py-7 relative overflow-hidden lg:col-span-2">
           <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full bg-white/5" />
           <Compass size={40} className="absolute right-5 top-4 text-white/10" />
           <p className="text-teal-200/70 text-xs mb-1">Pronto para explorar?</p>
-          <h2 className="text-white font-bold text-base leading-snug mb-3.5">Crie seu roteiro personalizado</h2>
+          <h2 className="text-white font-bold text-base lg:text-xl leading-snug mb-3.5">Crie seu roteiro personalizado</h2>
           <button onClick={() => setScreen("planner")}
             className="bg-white/15 hover:bg-white/25 text-white font-semibold text-sm px-4 py-2 rounded-xl flex items-center gap-1.5 transition border border-white/20">
             <Plus size={16} /> Planejar viagem
           </button>
         </div>
 
-        <div>
+        <div className="lg:row-span-2">
           <p className="text-slate-700 font-semibold text-sm mb-3">Acesso rápido</p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 lg:grid-cols-1 gap-2">
             {quickActions.map(({ label, Icon, color, screen: sc }) => (
               <button key={label} onClick={() => sc && setScreen(sc)}
-                className="flex flex-col items-center gap-2 bg-white border border-slate-100 rounded-2xl p-3 hover:bg-slate-50 transition">
+                className="flex flex-col lg:flex-row items-center gap-2 lg:gap-3 bg-white border border-slate-100 rounded-2xl p-3 hover:bg-slate-50 transition lg:text-left">
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}>
                   <Icon size={18} strokeWidth={1.8} />
                 </div>
-                <span className="text-slate-700 text-xs font-semibold leading-tight text-center">{label}</span>
+                <span className="text-slate-700 text-xs font-semibold leading-tight text-center lg:text-left">{label}</span>
               </button>
             ))}
           </div>
         </div>
 
-        <div>
+        <div className="lg:col-span-2">
           <div className="flex justify-between items-center mb-3">
             <p className="text-slate-700 font-semibold text-sm">Roteiros recentes</p>
             <button onClick={() => setScreen("history")} className="text-teal-600 text-xs font-semibold flex items-center gap-1">
@@ -674,7 +719,7 @@ function HomeScreen({ setScreen, usuario, token, setRoteiroAtivo }) {
           </div>
           {roteiros.length === 0
             ? <p className="text-slate-400 text-sm text-center py-6 bg-white rounded-2xl border border-slate-100">Nenhum roteiro criado ainda.</p>
-            : <div className="flex flex-col gap-2.5">
+            : <div className="flex flex-col gap-2.5 lg:grid lg:grid-cols-2 lg:gap-3">
                 {roteiros.map(r => (
                   <button key={r.id} onClick={() => { setRoteiroAtivo(r); setScreen("itinerary"); }}
                     className="flex gap-3 bg-white border border-slate-100 rounded-2xl p-3 hover:bg-slate-50 transition text-left">
@@ -709,46 +754,50 @@ function PlannerStep1({ setScreen, setPlanData, token }) {
 
   return (
     <PageWrapper screen="planner" setScreen={setScreen}>
-      <div className="bg-teal-800 px-5 pt-10 pb-6">
-        <div className="flex items-center gap-3 mb-5">
+      <div className="bg-teal-800 px-5 lg:px-10 pt-10 lg:pt-8 pb-6 lg:pb-8">
+        <div className="flex items-center gap-3 mb-5 max-w-2xl">
           <button onClick={() => setScreen("home")}
             className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center">
             <ArrowLeft size={18} color="white" />
           </button>
           <div>
-            <h2 className="text-white text-base font-bold">Planejar viagem</h2>
-            <p className="text-teal-200/70 text-xs">Escolha a região de destino</p>
+            <h2 className="text-white text-base lg:text-xl font-bold">Planejar viagem</h2>
+            <p className="text-teal-200/70 text-xs lg:text-sm">Escolha a região de destino</p>
           </div>
         </div>
-        <StepBar step={1} />
+        <div className="max-w-2xl">
+          <StepBar step={1} />
+        </div>
       </div>
 
-      <div className="px-4 py-4 flex flex-col gap-3">
-        {regioes.length === 0
-          ? <p className="text-slate-400 text-sm text-center py-10">Carregando regiões…</p>
-          : regioes.map(r => {
-              const RegIcon = REGION_ICONS[r.slug] || MapPin;
-              const isSel = selected?.id === r.id;
-              return (
-                <button key={r.id} onClick={() => setSelected(r)}
-                  className={`flex items-center gap-3 rounded-2xl p-3.5 border transition text-left ${
-                    isSel ? "bg-teal-50 border-teal-500 ring-1 ring-teal-400" : "bg-white border-slate-200 hover:border-slate-300"
-                  }`}>
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isSel ? "bg-teal-100" : "bg-slate-100"}`}>
-                    <RegIcon size={20} className={isSel ? "text-teal-700" : "text-slate-500"} strokeWidth={1.8} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`font-semibold text-sm ${isSel ? "text-teal-800" : "text-slate-800"}`}>{r.nome}</p>
-                    <p className="text-slate-400 text-xs truncate">{r.descricao}</p>
-                  </div>
-                  {isSel && <CheckCircle size={20} className="text-teal-600 flex-shrink-0" />}
-                </button>
-              );
-            })}
+      <div className="px-4 lg:px-10 py-4 lg:py-8 flex flex-col gap-3 lg:max-w-4xl">
+        <div className="lg:grid lg:grid-cols-2 lg:gap-3 flex flex-col gap-3">
+          {regioes.length === 0
+            ? <p className="text-slate-400 text-sm text-center py-10 lg:col-span-2">Carregando regiões…</p>
+            : regioes.map(r => {
+                const RegIcon = REGION_ICONS[r.slug] || MapPin;
+                const isSel = selected?.id === r.id;
+                return (
+                  <button key={r.id} onClick={() => setSelected(r)}
+                    className={`flex items-center gap-3 rounded-2xl p-3.5 border transition text-left ${
+                      isSel ? "bg-teal-50 border-teal-500 ring-1 ring-teal-400" : "bg-white border-slate-200 hover:border-slate-300"
+                    }`}>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isSel ? "bg-teal-100" : "bg-slate-100"}`}>
+                      <RegIcon size={20} className={isSel ? "text-teal-700" : "text-slate-500"} strokeWidth={1.8} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-semibold text-sm ${isSel ? "text-teal-800" : "text-slate-800"}`}>{r.nome}</p>
+                      <p className="text-slate-400 text-xs truncate">{r.descricao}</p>
+                    </div>
+                    {isSel && <CheckCircle size={20} className="text-teal-600 flex-shrink-0" />}
+                  </button>
+                );
+              })}
+        </div>
 
         <button disabled={!selected}
           onClick={() => { setPlanData({ regiao: selected }); setScreen("planner2"); }}
-          className={`w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition mt-2 ${
+          className={`w-full lg:max-w-xs py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition mt-2 ${
             selected ? "bg-teal-800 text-white hover:bg-teal-900 active:scale-95" : "bg-slate-200 text-slate-400 cursor-not-allowed"
           }`}>
           Continuar <ChevronRight size={16} />
@@ -777,21 +826,21 @@ function PlannerStep2({ setScreen, planData, setPlanData }) {
 
   return (
     <PageWrapper screen="planner" setScreen={setScreen}>
-      <div className="bg-teal-800 px-5 pt-10 pb-6">
-        <div className="flex items-center gap-3 mb-5">
+      <div className="bg-teal-800 px-5 lg:px-10 pt-10 lg:pt-8 pb-6 lg:pb-8">
+        <div className="flex items-center gap-3 mb-5 max-w-2xl">
           <button onClick={() => setScreen("planner")}
             className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center">
             <ArrowLeft size={18} color="white" />
           </button>
           <div>
-            <h2 className="text-white text-base font-bold">Planejar viagem</h2>
-            <p className="text-teal-200/70 text-xs">Defina as datas da viagem</p>
+            <h2 className="text-white text-base lg:text-xl font-bold">Planejar viagem</h2>
+            <p className="text-teal-200/70 text-xs lg:text-sm">Defina as datas da viagem</p>
           </div>
         </div>
-        <StepBar step={2} />
+        <div className="max-w-2xl"><StepBar step={2} /></div>
       </div>
 
-      <div className="px-4 py-4 flex flex-col gap-4">
+      <div className="px-4 lg:px-10 py-4 lg:py-8 flex flex-col gap-4 lg:max-w-2xl">
         {region && (
           <div className="relative rounded-2xl overflow-hidden h-32">
             <img src={getImg(region)} alt={"Paisagem de " + region.nome} className="w-full h-full object-cover" />
@@ -871,21 +920,21 @@ function PlannerStep3({ setScreen, planData, setPlanData, token, setRoteiroAtivo
 
   return (
     <PageWrapper screen="planner" setScreen={setScreen}>
-      <div className="bg-teal-800 px-5 pt-10 pb-6">
-        <div className="flex items-center gap-3 mb-5">
+      <div className="bg-teal-800 px-5 lg:px-10 pt-10 lg:pt-8 pb-6 lg:pb-8">
+        <div className="flex items-center gap-3 mb-5 max-w-2xl">
           <button onClick={() => setScreen("planner2")}
             className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center">
             <ArrowLeft size={18} color="white" />
           </button>
           <div>
-            <h2 className="text-white text-base font-bold">Suas preferências</h2>
-            <p className="text-teal-200/70 text-xs">Personalização do roteiro</p>
+            <h2 className="text-white text-base lg:text-xl font-bold">Suas preferências</h2>
+            <p className="text-teal-200/70 text-xs lg:text-sm">Personalização do roteiro</p>
           </div>
         </div>
-        <StepBar step={3} />
+        <div className="max-w-2xl"><StepBar step={3} /></div>
       </div>
 
-      <div className="px-4 py-4 flex flex-col gap-5">
+      <div className="px-4 lg:px-10 py-4 lg:py-8 flex flex-col gap-5 lg:max-w-3xl">
         {erro && (
           <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-2.5 rounded-xl">
             <AlertTriangle size={15} />{erro}
@@ -894,7 +943,7 @@ function PlannerStep3({ setScreen, planData, setPlanData, token, setRoteiroAtivo
 
         <div>
           <p className="text-slate-700 font-semibold text-sm mb-3">O que você mais curte? <span className="text-slate-400 font-normal">(opcional)</span></p>
-          <div className="grid grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-3 lg:grid-cols-6 gap-2.5">
             {PREFERENCES.map(({ id, label, Icon }) => (
               <button key={id} onClick={() => toggle(id)}
                 className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border text-xs font-semibold transition ${
@@ -952,8 +1001,8 @@ function ResumoFinanceiroModal({ roteiro, token, onClose }) {
   const cores = ['bg-teal-500', 'bg-blue-500', 'bg-amber-500', 'bg-emerald-500', 'bg-purple-500', 'bg-rose-500'];
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-end justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-white rounded-t-3xl w-full max-w-sm p-5 pb-8 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[150] flex items-end lg:items-center justify-center bg-black/40 lg:p-6" onClick={onClose}>
+      <div className="bg-white rounded-t-3xl lg:rounded-3xl w-full max-w-sm lg:max-w-lg p-5 pb-8 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-slate-800 font-bold text-base flex items-center gap-2">
             <BarChart2 size={18} className="text-teal-700" />Resumo Financeiro
@@ -1035,8 +1084,8 @@ function MapaDiaModal({ dia, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[150] flex flex-col bg-black/70" onClick={onClose}>
-      <div className="bg-white w-full max-w-sm mx-auto mt-auto rounded-t-3xl overflow-hidden" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[150] flex flex-col lg:items-center lg:justify-center bg-black/70 lg:p-6" onClick={onClose}>
+      <div className="bg-white w-full max-w-sm lg:max-w-lg mx-auto mt-auto lg:mt-0 rounded-t-3xl lg:rounded-3xl overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center px-5 py-4 border-b border-slate-100">
           <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
             <MapPin size={16} className="text-teal-700" />Rota do Dia {dia.numero_dia} — {dia.data}
@@ -1112,8 +1161,8 @@ function TransporteModal({ roteiro, token, onClose, toast }) {
   if (showVoos) return <VoosModal roteiro={roteiro} token={token} onClose={() => setShowVoos(false)} />;
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-end justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-white rounded-t-3xl w-full max-w-sm p-5 pb-8 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[150] flex items-end lg:items-center justify-center bg-black/40 lg:p-6" onClick={onClose}>
+      <div className="bg-white rounded-t-3xl lg:rounded-3xl w-full max-w-sm lg:max-w-lg p-5 pb-8 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-slate-800 font-bold text-base flex items-center gap-2">
             <Plane size={18} className="text-teal-700" />Transporte
@@ -1225,8 +1274,8 @@ function HospedagemModal({ roteiro, onClose }) {
   ];
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-end justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-white rounded-t-3xl w-full max-w-sm p-5 pb-8 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[150] flex items-end lg:items-center justify-center bg-black/40 lg:p-6" onClick={onClose}>
+      <div className="bg-white rounded-t-3xl lg:rounded-3xl w-full max-w-sm lg:max-w-lg p-5 pb-8 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-slate-800 font-bold text-base flex items-center gap-2">
             <Landmark size={18} className="text-teal-700" />Hospedagem
@@ -1317,8 +1366,8 @@ function AlterarDestinoModal({ roteiro, token, onClose, toast, onAtualizar }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-end justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-white rounded-t-3xl w-full max-w-sm p-5 pb-8 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[150] flex items-end lg:items-center justify-center bg-black/40 lg:p-6" onClick={onClose}>
+      <div className="bg-white rounded-t-3xl lg:rounded-3xl w-full max-w-sm lg:max-w-lg p-5 pb-8 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-slate-800 font-bold text-base flex items-center gap-2">
             <MapPin size={18} className="text-teal-700" />Alterar destino
@@ -1409,7 +1458,9 @@ function ItineraryScreen({ setScreen, roteiro: roteiroInicial, token }) {
       {mapaDia         && <MapaDiaModal dia={mapaDia} onClose={() => setMapaDia(null)} />}
       {showResumo      && <ResumoFinanceiroModal roteiro={roteiro} token={token} onClose={() => setShowResumo(false)} />}
 
-      <div className="relative h-52">
+      <div className="lg:flex lg:gap-6 lg:px-10 lg:pt-6 lg:items-start">
+      <div className="lg:w-[380px] lg:flex-shrink-0 lg:sticky lg:top-6">
+      <div className="relative h-52 lg:rounded-2xl lg:overflow-hidden">
         <img src={imgHero} alt={"Foto de " + roteiro.regiao_nome} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
         <div className="absolute top-4 left-4 right-4 flex justify-between">
@@ -1443,7 +1494,7 @@ function ItineraryScreen({ setScreen, roteiro: roteiroInicial, token }) {
         </div>
       </div>
 
-      <div className="mx-4 -mt-5 relative z-10 bg-white rounded-2xl border border-slate-100 shadow-md p-4 mb-3">
+      <div className="mx-4 lg:mx-0 -mt-5 lg:mt-4 relative z-10 bg-white rounded-2xl border border-slate-100 shadow-md p-4 mb-3 lg:mb-0">
         <div className="flex justify-between items-center mb-2">
           <span className="bg-amber-50 text-amber-700 text-xs font-semibold px-2.5 py-1 rounded-full capitalize flex items-center gap-1">
             <CreditCard size={11} />{roteiro.nivel_orcamento}
@@ -1499,10 +1550,13 @@ function ItineraryScreen({ setScreen, roteiro: roteiroInicial, token }) {
         </div>
       </div>
 
-      <div className="px-4 pb-8 flex flex-col gap-5">
+      </div>
+
+      <div className="px-4 lg:px-0 pb-8 lg:pb-10 flex flex-col gap-5 lg:flex-1 lg:min-w-0">
         {(roteiro.dias || []).map(dia => (
           <DiaSection key={dia.id} dia={dia} token={token} onRecarregar={recarregar} toast={show} onVerMapa={() => setMapaDia(dia)} />
         ))}
+      </div>
       </div>
     </PageWrapper>
   );
@@ -1556,8 +1610,8 @@ function AddItemModal({ dia, token, onClose, onRecarregar, toast }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-end justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-white rounded-t-3xl w-full max-w-sm p-5 pb-8 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[150] flex items-end lg:items-center justify-center bg-black/40 lg:p-6" onClick={onClose}>
+      <div className="bg-white rounded-t-3xl lg:rounded-3xl w-full max-w-sm lg:max-w-lg p-5 pb-8 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-slate-800 font-bold text-base flex items-center gap-2">
             <Plus size={18} className="text-teal-700" />Adicionar ao Dia {dia.numero_dia}
@@ -1886,13 +1940,13 @@ function HistoryScreen({ setScreen, token, setRoteiroAtivo }) {
   return (
     <PageWrapper screen="history" setScreen={setScreen}>
       {toastEl}
-      <div className="px-5 pt-10 pb-4 bg-teal-800">
-        <h1 className="text-white text-xl font-bold">Minhas viagens</h1>
-        <p className="text-teal-200/70 text-xs mt-0.5">Todos os seus roteiros em um lugar</p>
+      <div className="px-5 lg:px-10 pt-10 lg:pt-8 pb-4 lg:pb-6 bg-teal-800">
+        <h1 className="text-white text-xl lg:text-2xl font-bold">Minhas viagens</h1>
+        <p className="text-teal-200/70 text-xs lg:text-sm mt-0.5">Todos os seus roteiros em um lugar</p>
       </div>
 
-      <div className="px-4 py-4 flex flex-col gap-4">
-        <div className="grid grid-cols-3 gap-2.5">
+      <div className="px-4 lg:px-10 py-4 lg:py-6 flex flex-col gap-4 lg:max-w-5xl">
+        <div className="grid grid-cols-3 lg:grid-cols-3 lg:max-w-md gap-2.5">
           {statCards.map(({ Icon, val, label }) => (
             <div key={label} className="bg-white border border-slate-100 rounded-2xl p-3 text-center">
               <div className="w-7 h-7 rounded-lg bg-teal-50 flex items-center justify-center mx-auto mb-2">
@@ -1905,7 +1959,7 @@ function HistoryScreen({ setScreen, token, setRoteiroAtivo }) {
         </div>
 
         {/* CT-092/099: Campo de pesquisa — visível e digitável */}
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1 lg:max-w-md">
           <label className="text-slate-500 text-xs font-semibold">Pesquisar viagens</label>
           <div className="flex items-center gap-2 bg-white border-2 border-teal-200 rounded-xl px-3.5 py-3 focus-within:border-teal-500 transition">
             <Search size={16} className="text-teal-500 flex-shrink-0" />
@@ -1921,7 +1975,7 @@ function HistoryScreen({ setScreen, token, setRoteiroAtivo }) {
 
         {roteiros.length === 0
           ? <p className="text-slate-400 text-sm text-center py-8">{filtro ? "Nenhum resultado encontrado." : "Nenhum roteiro encontrado."}</p>
-          : <div className="flex flex-col gap-3">
+          : <div className="flex flex-col gap-3 lg:grid lg:grid-cols-3 lg:gap-4">
               {roteiros.map(h => {
                 const RegIcon = REGION_ICONS[h.regiao_slug] || MapPin;
                 return (
@@ -1988,14 +2042,14 @@ function ProfileDataScreen({ setScreen, token, usuario }) {
   };
 
   return (
-    <PageWrapper noNav>
-      <div className="bg-teal-800 px-5 pt-10 pb-6 flex items-center gap-3">
+    <PageWrapper screen="profile" setScreen={setScreen}>
+      <div className="bg-teal-800 px-5 lg:px-10 pt-10 lg:pt-8 pb-6 flex items-center gap-3">
         <button onClick={() => setScreen("profile")} className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center">
           <ArrowLeft size={18} color="white" />
         </button>
-        <h2 className="text-white text-base font-bold">Dados Pessoais</h2>
+        <h2 className="text-white text-base lg:text-xl font-bold">Dados Pessoais</h2>
       </div>
-      <div className="px-4 py-6 flex flex-col gap-4">
+      <div className="px-4 lg:px-10 py-6 flex flex-col gap-4 lg:max-w-2xl">
         {msg && <div className="bg-slate-100 p-3 rounded-xl text-sm font-semibold text-slate-700 text-center">{msg}</div>}
         <div className="flex flex-col gap-1.5">
           <label className="text-slate-700 text-sm font-semibold">Nome Completo</label>
@@ -2028,14 +2082,14 @@ function NotificationsScreen({ setScreen, token }) {
   }, [token]);
 
   return (
-    <PageWrapper noNav>
-      <div className="bg-teal-800 px-5 pt-10 pb-6 flex items-center gap-3">
+    <PageWrapper screen="home" setScreen={setScreen}>
+      <div className="bg-teal-800 px-5 lg:px-10 pt-10 lg:pt-8 pb-6 flex items-center gap-3">
         <button onClick={() => setScreen("home")} className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center">
           <ArrowLeft size={18} color="white" />
         </button>
-        <h2 className="text-white text-base font-bold">Notificações</h2>
+        <h2 className="text-white text-base lg:text-xl font-bold">Notificações</h2>
       </div>
-      <div className="px-4 py-4 flex flex-col gap-3">
+      <div className="px-4 lg:px-10 py-4 flex flex-col gap-3 lg:max-w-2xl">
         {notificacoes.length === 0
           ? <p className="text-center text-slate-400 text-sm mt-10">Nenhuma notificação nova.</p>
           : notificacoes.map(n => (
@@ -2142,14 +2196,14 @@ function FavoritosScreen({ setScreen, token }) {
   }, [token]);
 
   return (
-    <PageWrapper noNav>
-      <div className="bg-teal-800 px-5 pt-10 pb-6 flex items-center gap-3">
+    <PageWrapper screen="profile" setScreen={setScreen}>
+      <div className="bg-teal-800 px-5 lg:px-10 pt-10 lg:pt-8 pb-6 flex items-center gap-3">
         <button onClick={() => setScreen("profile")} className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center">
           <ArrowLeft size={18} color="white" />
         </button>
-        <h2 className="text-white text-base font-bold">Regiões Favoritas</h2>
+        <h2 className="text-white text-base lg:text-xl font-bold">Regiões Favoritas</h2>
       </div>
-      <div className="px-4 py-4 flex flex-col gap-3">
+      <div className="px-4 lg:px-10 py-4 flex flex-col gap-3 lg:max-w-2xl">
         {favoritos.length === 0
           ? <p className="text-center text-slate-400 text-sm mt-10">Nenhuma região favoritada ainda.</p>
           : favoritos.map(f => {
@@ -2192,15 +2246,15 @@ function AvaliacoesScreen({ setScreen, token }) {
   };
 
   return (
-    <PageWrapper noNav>
+    <PageWrapper screen="profile" setScreen={setScreen}>
       {toastEl}
-      <div className="bg-teal-800 px-5 pt-10 pb-6 flex items-center gap-3">
+      <div className="bg-teal-800 px-5 lg:px-10 pt-10 lg:pt-8 pb-6 flex items-center gap-3">
         <button onClick={() => setScreen("profile")} className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center">
           <ArrowLeft size={18} color="white" />
         </button>
-        <h2 className="text-white text-base font-bold">Minhas Avaliações</h2>
+        <h2 className="text-white text-base lg:text-xl font-bold">Minhas Avaliações</h2>
       </div>
-      <div className="px-4 py-4 flex flex-col gap-4">
+      <div className="px-4 lg:px-10 py-4 flex flex-col gap-4 lg:max-w-2xl">
         {pendentes.length > 0 && (
           <div>
             <p className="text-slate-700 font-semibold text-sm mb-2">Aguardando avaliação</p>
