@@ -220,6 +220,12 @@ router.get('/:id/export', async (req, res) => {
     const roteiro = await getRoteiroCompleto(req.params.id, req.usuario.id);
     if (!roteiro) return res.status(404).json({ error: 'Roteiro não encontrado.' });
 
+    // Voo selecionado (se houver) — exibido no PDF sem alterar o custo total
+    const [vooEscolhido] = await query(
+      'SELECT companhia, origem, destino, preco FROM roteiro_voos WHERE roteiro_id = ? LIMIT 1',
+      [roteiro.id]
+    );
+
     const doc = new PDFDocument({ margin: 50, size: 'A4' });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="roteiro-${roteiro.id}.pdf"`);
@@ -238,6 +244,15 @@ router.get('/:id/export', async (req, res) => {
     doc.text(`Orçamento: ${roteiro.nivel_orcamento}`);
     doc.text(`Custo total estimado: R$ ${Number(roteiro.custo_total).toFixed(2)}`);
     doc.moveDown(1);
+
+    // Seção do voo selecionado (só aparece se houver voo salvo)
+    if (vooEscolhido) {
+      doc.fontSize(12).fillColor('#0f766e').text('Voo selecionado', { underline: true });
+      doc.fontSize(10).fillColor('#1e293b').text(
+        `${vooEscolhido.companhia || 'Companhia'} · ${vooEscolhido.origem} → ${vooEscolhido.destino} · R$ ${Number(vooEscolhido.preco || 0).toFixed(2)}`
+      );
+      doc.moveDown(1);
+    }
 
     for (const dia of (roteiro.dias || [])) {
       doc.fontSize(12).fillColor('#0f766e').text(`Dia ${dia.numero_dia} — ${dia.data}`, { underline: true });
