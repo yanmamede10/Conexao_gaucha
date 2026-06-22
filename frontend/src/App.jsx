@@ -248,23 +248,17 @@ function VoosModal({ roteiro, token, onClose }) {
   const [vooSalvo, setVooSalvo] = useState(null);
   const { show, el: toastEl } = useToast();
 
-  const buscar = () => {
-    if (!origem.trim()) return setErro("Informe a cidade de origem.");
-    setErro("");
-    // Datas no formato AAMMDD que o Skyscanner usa na URL
-    const fmt = (d) => {
-      if (!d) return "";
-      const [a, m, dia] = d.split("-");
-      return a.slice(2) + m + dia;
-    };
-    const ida = fmt(roteiro.data_inicio);
-    const volta = fmt(roteiro.data_fim);
-    // Slug simples da cidade de origem (sem acentos/espaços) — destino fixo Porto Alegre
-    const slug = origem.trim().toLowerCase()
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    const url = `https://www.skyscanner.com.br/transporte/passagens-aereas/${slug}/poa/${ida}/${volta}/`;
-    window.open(url, "_blank");
+  const buscar = async () => {
+    setErro(""); setLoading(true);
+    const res = await api.getVoos(token, roteiro.id, {
+      origem,
+      data_ida: roteiro.data_inicio,
+      data_volta: roteiro.data_fim,
+    });
+    setLoading(false);
+    if (res.error) return setErro(res.error);
+    if (!res.voos || res.voos.length === 0) return setErro("Nenhum voo encontrado para esse trecho.");
+    setVoos(res.voos);
   };
 
   const escolher = async (voo) => {
@@ -302,14 +296,14 @@ function VoosModal({ roteiro, token, onClose }) {
           </div>
           <button onClick={buscar} disabled={loading}
             className="bg-teal-800 text-white px-4 rounded-xl text-sm font-semibold disabled:opacity-60 flex items-center gap-1.5">
-            {loading ? <RefreshCw size={14} className="animate-spin" /> : <ExternalLink size={14} />}
-            Ver voos
+            {loading ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
+            Buscar
           </button>
         </div>
 
         <div className="flex items-center gap-2 mb-4 text-xs text-slate-400">
           <Calendar size={12} />{roteiro.data_inicio} → {roteiro.data_fim}
-          <span className="ml-1">· Destino: Porto Alegre · abre no Skyscanner</span>
+          <span className="ml-1">· Destino: Porto Alegre</span>
         </div>
 
         {erro && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-xl mb-3 flex items-center gap-1"><AlertTriangle size={13} />{erro}</p>}

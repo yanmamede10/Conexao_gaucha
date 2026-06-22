@@ -1,10 +1,28 @@
 const fetch = require('node-fetch');
 
 const RAPID_KEY = process.env.RAPIDAPI_KEY;
-const RAPID_HOST = 'skyscanner50.p.rapidapi.com';
+const RAPID_HOST = 'skyscanner-flights-travel-api.p.rapidapi.com';
+const BASE = `https://${RAPID_HOST}`;
 
-// CT-61: Buscar preços de voos via Skyscanner/RapidAPI
-// Retorna opções de voo de uma cidade de origem para a região de destino
+const HEADERS = () => ({
+  'x-rapidapi-key': RAPID_KEY,
+  'x-rapidapi-host': RAPID_HOST,
+});
+
+// Resolve uma cidade/aeroporto para os códigos skyId + entityId que a API exige.
+// Prioriza resultado do tipo CITY; se não houver, usa o primeiro disponível.
+async function resolverLocal(termo) {
+  const url = `${BASE}/flights/searchAirport?market=BR&locale=pt-BR&query=${encodeURIComponent(termo)}`;
+  const res = await fetch(url, { headers: HEADERS() });
+  if (!res.ok) throw new Error(`searchAirport HTTP ${res.status}`);
+  const data = await res.json();
+  const places = data?.places || [];
+  if (!places.length) return null;
+  const cidade = places.find(p => p.placeType === 'CITY') || places[0];
+  return { skyId: cidade.skyId, entityId: cidade.entityId, nome: cidade.name };
+}
+
+// CT-61: Buscar preços de voos via Skyscanner Flights & Travel API (RapidAPI)
 async function buscarVoos({ origem, destino, dataIda, dataVolta }) {
   if (!RAPID_KEY) {
     console.warn('[Skyscanner] RAPIDAPI_KEY não configurada');
@@ -12,77 +30,58 @@ async function buscarVoos({ origem, destino, dataIda, dataVolta }) {
   }
 
   try {
-    // 1. Buscar IATA code do aeroporto de origem
-    const searchRes = await fetch(
-      `https://${RAPID_HOST}/api/v1/flights/searchAirport?query=${encodeURIComponent(origem)}&locale=pt-BR`,
-      {
-        headers: {
-          'X-RapidAPI-Key': RAPID_KEY,
-          'X-RapidAPI-Host': RAPID_HOST,
-        },
-      }
-    );
-    const searchData = await searchRes.json();
-    const aeroportos = searchData?.data || [];
-    if (!aeroportos.length) return null;
-    const originId = aeroportos[0]?.skyId;
-    const originEntityId = aeroportos[0]?.entityId;
+    // 1. Resolve origem e destino em paralelo
+    const [orig, dest] = await Promise.all([
+      resolverLocal(origem),
+      resolverLocal(destino),
+    ]);
+    if (!orig || !dest) {
+      console.warn('[Skyscanner] Origem ou destino não encontrados');
+      return null;
+    }
 
-    // 2. Buscar IATA code do destino (POA como hub do RS)
-    const destRes = await fetch(
-      `https://${RAPID_HOST}/api/v1/flights/searchAirport?query=${encodeURIComponent(destino)}&locale=pt-BR`,
-      {
-        headers: {
-          'X-RapidAPI-Key': RAPID_KEY,
-          'X-RapidAPI-Host': RAPID_HOST,
-        },
-      }
-    );
-    const destData = await destRes.json();
-    const destAeroportos = destData?.data || [];
-    if (!destAeroportos.length) return null;
-    const destId = destAeroportos[0]?.skyId;
-    const destEntityId = destAeroportos[0]?.entityId;
+    // 2. Monta a query de busca de voos
+    const params = new URLSearchParams({
+      originSkyId: orig.skyId,
+      destinationSkyId: dest.skyId,
+      originEntityId: orig.entityId,
+      destinationEntityId: dest.entityId,
+      date: dataIda,
+      adults: '1',
+      currency: 'BRL',
+      market: 'BR',
+      countryCode: 'BR',
+      cabinClass: 'economy',
+    });
+    if (dataVolta) params.set('returnDate', dataVolta);
 
-    // 3. Buscar voos
-    const flightsRes = await fetch(
-      `https://${RAPID_HOST}/api/v1/flights/searchFlights?` +
-      new URLSearchParams({
-        originSkyId: originId,
-        destinationSkyId: destId,
-        originEntityId,
-        destinationEntityId: destEntityId,
-        date: dataIda,
-        returnDate: dataVolta || '',
-        cabinClass: 'economy',
-        adults: '1',
-        currency: 'BRL',
-        market: 'BR',
-        countryCode: 'BR',
-        locale: 'pt-BR',
-      }),
-      {
-        headers: {
-          'X-RapidAPI-Key': RAPID_KEY,
-          'X-RapidAPI-Host': RAPID_HOST,
-        },
-      }
-    );
-    const flightsData = await flightsRes.json();
-    const itineraries = flightsData?.data?.itineraries || [];
+    const res = await fetch(`${BASE}/flights/searchFlights?${params.toString()}`, {
+      headers: HEADERS(),
+    });
+    if (!res.ok) {
+      console.error('[Skyscanner] searchFlights HTTP', res.status);
+      return null;
+    }
 
-    // Retorna as 3 melhores opções formatadas
-    return itineraries.slice(0, 3).map((it) => ({
-      preco: it.price?.raw || 0,
-      preco_formatado: it.price?.formatted || 'N/D',
-      duracao_minutos: it.legs?.[0]?.durationInMinutes || 0,
-      paradas: it.legs?.[0]?.stopCount || 0,
-      companhia: it.legs?.[0]?.carriers?.marketing?.[0]?.name || 'N/D',
-      logo: it.legs?.[0]?.carriers?.marketing?.[0]?.logoUrl || null,
-      partida: it.legs?.[0]?.departure || null,
-      chegada: it.legs?.[0]?.arrival || null,
-      link_reserva: `https://www.skyscanner.com.br/transporte/passagens-aereas/${originId}/${destId}/${dataIda}/`,
-    }));
+    const data = await res.json();
+    const itineraries = data?.itineraries || [];
+    if (!itineraries.length) return null;
+
+    // 3. Formata as 3 melhores opções (a API já devolve ordenado por preço/score)
+    return itineraries.slice(0, 3).map((it) => {
+      const ida = it.legs?.[0] || {};
+      return {
+        preco: it.price?.amount || 0,
+        preco_formatado: it.price?.formatted || 'N/D',
+        duracao_minutos: ida.durationMinutes || 0,
+        paradas: ida.stopCount || 0,
+        companhia: ida.carriers?.[0]?.name || 'N/D',
+        logo: ida.carriers?.[0]?.logoUrl || null,
+        partida: ida.departure || null,
+        chegada: ida.arrival || null,
+        link_reserva: it.bookingUrl || `https://www.skyscanner.com.br/transporte/passagens-aereas/`,
+      };
+    });
   } catch (err) {
     console.error('[Skyscanner] Erro:', err.message);
     return null;
