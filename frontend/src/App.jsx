@@ -1418,6 +1418,14 @@ function ItineraryScreen({ setScreen, roteiro: roteiroInicial, token }) {
   const [mapaDia, setMapaDia] = useState(null);
   const { show, el: toastEl } = useToast();
 
+  useEffect(() => {
+    if (roteiroInicial?.id) {
+      api.getRoteiro(token, roteiroInicial.id).then(res => {
+        if (res && !res.error) setRoteiro(res);
+      });
+    }
+  }, [roteiroInicial?.id, token]);
+
   if (!roteiro) return (
     <PageWrapper screen="home" setScreen={setScreen}>
       <div className="flex items-center justify-center min-h-screen">
@@ -2118,12 +2126,11 @@ function ProfileScreen({ setScreen, token, onLogout }) {
       { Icon: Bell,       label: "Notificações",           desc: "Alertas e novidades",  action: () => setScreen("notificacoes") },
     ]},
     { title: "PREFERÊNCIAS", items: [
-      { Icon: MapPin,     label: "Regiões favoritas",      desc: "Seus destinos preferidos", action: () => setScreen("favoritos") },
       { Icon: Star,       label: "Avaliações",             desc: "Locais que você visitou",  action: () => setScreen("avaliacoes") },
     ]},
     { title: "SUPORTE", items: [
-      { Icon: Shield,     label: "Privacidade e segurança", desc: "", action: () => {} },
-      { Icon: HelpCircle, label: "Ajuda e suporte",         desc: "", action: () => {} },
+      { Icon: Shield,     label: "Privacidade e segurança", desc: "Como tratamos seus dados", action: () => setScreen("privacidade") },
+      { Icon: HelpCircle, label: "Ajuda e suporte",         desc: "Perguntas frequentes",      action: () => setScreen("ajuda") },
       { Icon: LogOut,     label: "Sair da conta",           desc: "", danger: true, action: onLogout },
     ]},
   ];
@@ -2139,9 +2146,6 @@ function ProfileScreen({ setScreen, token, onLogout }) {
             <p className="text-white font-bold truncate">{perfil?.nome_completo || "Carregando…"}</p>
             <div className="flex items-center gap-1 text-teal-200/70 text-xs"><Mail size={11} />{perfil?.email || "…"}</div>
           </div>
-          <button className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center">
-            <Settings size={16} color="white" strokeWidth={1.8} />
-          </button>
         </div>
       </div>
 
@@ -2188,6 +2192,86 @@ function ProfileScreen({ setScreen, token, onLogout }) {
 }
 
 // ─── FAVORITOS ────────────────────────────────────────────────────────────────
+function PrivacidadeScreen({ setScreen }) {
+  const secoes = [
+    { titulo: "Coleta de dados", texto: "Coletamos apenas as informações necessárias para o funcionamento do app: seu nome, e-mail e os roteiros de viagem que você cria. Esses dados são usados exclusivamente para oferecer a você uma experiência personalizada de planejamento de viagens pelo Rio Grande do Sul." },
+    { titulo: "Uso das informações", texto: "Suas informações são utilizadas para salvar seus roteiros, regiões favoritas e avaliações. Não compartilhamos seus dados pessoais com terceiros para fins comerciais ou publicitários." },
+    { titulo: "Segurança", texto: "Sua senha é armazenada de forma criptografada e nunca fica visível para nossa equipe. A comunicação com nossos servidores é protegida e o acesso à sua conta é feito por meio de autenticação segura." },
+    { titulo: "Seus direitos (LGPD)", texto: "De acordo com a Lei Geral de Proteção de Dados, você pode solicitar a qualquer momento o acesso, a correção ou a exclusão dos seus dados pessoais. Para isso, entre em contato pelo nosso canal de suporte." },
+    { titulo: "Cookies e sessão", texto: "Utilizamos um token de sessão para manter você conectado. Essa informação fica armazenada apenas no seu dispositivo e é removida ao sair da conta." },
+  ];
+
+  return (
+    <PageWrapper screen="profile" setScreen={setScreen}>
+      <div className="bg-teal-800 px-5 lg:px-10 pt-10 lg:pt-8 pb-6 flex items-center gap-3">
+        <button onClick={() => setScreen("profile")} className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center">
+          <ArrowLeft size={18} color="white" />
+        </button>
+        <h2 className="text-white text-base lg:text-xl font-bold">Privacidade e segurança</h2>
+      </div>
+      <div className="px-4 lg:px-10 py-4 flex flex-col gap-3 lg:max-w-2xl">
+        <p className="text-slate-400 text-xs mb-1">Última atualização: junho de 2026</p>
+        {secoes.map((s, i) => (
+          <div key={i} className="bg-white p-4 rounded-2xl border border-slate-100">
+            <h4 className="font-bold text-slate-800 text-sm mb-1.5 flex items-center gap-2">
+              <Shield size={14} className="text-teal-700" strokeWidth={1.8} />{s.titulo}
+            </h4>
+            <p className="text-slate-600 text-xs leading-relaxed">{s.texto}</p>
+          </div>
+        ))}
+      </div>
+    </PageWrapper>
+  );
+}
+
+function AjudaScreen({ setScreen }) {
+  const [aberta, setAberta] = useState(null);
+  const faqs = [
+    { p: "Como crio um roteiro de viagem?", r: "Toque em \"Planejar\" na barra inferior, escolha a região que deseja visitar, defina as datas e suas preferências. O app monta automaticamente um roteiro com sugestões de locais para cada dia." },
+    { p: "Posso editar um roteiro depois de criado?", r: "Sim. Acesse o roteiro pelo \"Histórico\", abra os detalhes e você poderá ajustar os locais, adicionar notas e marcar itens como concluídos." },
+    { p: "Como funciona a estimativa de custo?", r: "O app calcula um custo médio estimado com base nos locais e na duração do roteiro. É uma estimativa para ajudar no planejamento, podendo variar conforme suas escolhas reais." },
+    { p: "Como avalio um roteiro que já fiz?", r: "Vá em \"Perfil\" > \"Avaliações\". Os roteiros concluídos aparecem como pendentes de avaliação. Dê de 1 a 5 estrelas e, se quiser, deixe um comentário." },
+    { p: "Esqueci minha senha. E agora?", r: "Entre em contato pelo nosso canal de suporte abaixo para receber ajuda na recuperação do acesso à sua conta." },
+    { p: "Como entro em contato com o suporte?", r: "Você pode nos enviar um e-mail para suporte@conexaogaucha.com.br. Respondemos em até 48 horas úteis." },
+  ];
+
+  return (
+    <PageWrapper screen="profile" setScreen={setScreen}>
+      <div className="bg-teal-800 px-5 lg:px-10 pt-10 lg:pt-8 pb-6 flex items-center gap-3">
+        <button onClick={() => setScreen("profile")} className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center">
+          <ArrowLeft size={18} color="white" />
+        </button>
+        <h2 className="text-white text-base lg:text-xl font-bold">Ajuda e suporte</h2>
+      </div>
+      <div className="px-4 lg:px-10 py-4 flex flex-col gap-3 lg:max-w-2xl">
+        <p className="text-slate-500 text-sm mb-1">Perguntas frequentes</p>
+        {faqs.map((f, i) => (
+          <div key={i} className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+            <button
+              onClick={() => setAberta(aberta === i ? null : i)}
+              className="w-full flex items-center justify-between gap-2 p-4 text-left"
+            >
+              <span className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                <HelpCircle size={14} className="text-teal-700 flex-shrink-0" strokeWidth={1.8} />{f.p}
+              </span>
+              <ChevronRight size={16} className={`text-slate-400 flex-shrink-0 transition-transform ${aberta === i ? "rotate-90" : ""}`} />
+            </button>
+            {aberta === i && (
+              <p className="text-slate-600 text-xs leading-relaxed px-4 pb-4 -mt-1">{f.r}</p>
+            )}
+          </div>
+        ))}
+        <div className="bg-teal-50 border border-teal-100 rounded-2xl p-4 mt-1">
+          <h4 className="font-bold text-teal-800 text-sm mb-1 flex items-center gap-2">
+            <MessageSquare size={14} strokeWidth={1.8} />Ainda precisa de ajuda?
+          </h4>
+          <p className="text-teal-700/80 text-xs">Envie um e-mail para suporte@conexaogaucha.com.br e responderemos em até 48 horas úteis.</p>
+        </div>
+      </div>
+    </PageWrapper>
+  );
+}
+
 function FavoritosScreen({ setScreen, token }) {
   const [favoritos, setFavoritos] = useState([]);
 
@@ -2238,7 +2322,7 @@ function AvaliacoesScreen({ setScreen, token }) {
   }, [token]);
 
   const salvar = async (roteiro_id, nota, comentario) => {
-    const res = await api.salvarAvaliacao(token, { roteiro_id, nota, comentario });
+    const res = await api.salvarAvaliacao(token, { roteiro_id, estrelas: nota, comentario });
     if (res.error) return show(res.error, "error");
     show("Avaliação salva!");
     api.getAvaliacoes(token).then(d => { if (Array.isArray(d)) setAvaliacoes(d); });
@@ -2356,6 +2440,8 @@ export default function App() {
     notificacoes:   <NotificationsScreen setScreen={setScreen} token={token} />,
     favoritos:      <FavoritosScreen setScreen={setScreen} token={token} />,
     avaliacoes:     <AvaliacoesScreen setScreen={setScreen} token={token} />,
+    privacidade:    <PrivacidadeScreen setScreen={setScreen} />,
+    ajuda:          <AjudaScreen setScreen={setScreen} />,
   };
 
   return (
