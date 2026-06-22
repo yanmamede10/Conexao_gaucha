@@ -695,6 +695,33 @@ function HomeScreen({ setScreen, usuario, token, setRoteiroAtivo }) {
           </button>
         </div>
 
+        {/* Locais populares por época do ano — Inverno (estação atual) */}
+        <div className="lg:col-span-2">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-teal-50 text-teal-700">
+              <MountainSnow size={15} strokeWidth={1.8} />
+            </div>
+            <p className="text-slate-700 font-semibold text-sm">Populares no Inverno</p>
+          </div>
+          <div className="flex flex-col gap-2.5 lg:grid lg:grid-cols-3 lg:gap-3">
+            {[
+              { nome: "Gramado e Canela",      desc: "Serra · frio, fondue e charme" },
+              { nome: "São José dos Ausentes", desc: "Serra · um dos lugares mais frios do RS" },
+              { nome: "Cambará do Sul",        desc: "Cânions e geadas de inverno" },
+            ].map((l, i) => (
+              <div key={i} className="flex gap-3 lg:flex-col bg-white border border-slate-100 rounded-2xl p-3">
+                <div className="w-12 h-12 lg:w-9 lg:h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-teal-50 text-teal-700">
+                  <MapPin size={18} strokeWidth={1.8} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-slate-800 font-semibold text-sm">{l.nome}</p>
+                  <p className="text-slate-400 text-xs">{l.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="lg:row-span-2">
           <p className="text-slate-700 font-semibold text-sm mb-3">Acesso rápido</p>
           <div className="grid grid-cols-3 lg:grid-cols-1 gap-2">
